@@ -1,9 +1,9 @@
 {
-  "name": "Control",
+  "name": "Control App",
   "short_name": "Control",
   "description": "Registro de ingresos, egresos, ventas, inventario, clientes y proveedores.",
-  "start_url": ".",
-  "scope": ".",
+  "start_url": "https://royherrera09.github.io/control-app/",
+  "scope": "/control-app/",
   "display": "standalone",
   "background_color": "#F5F6F8",
   "theme_color": "#16213E",
@@ -18,5 +18,9 @@
       "sizes": "512x512",
       "type": "image/png"
     }
+  ],
+  "lang": "es",
+  "categories": [
+    "finance"
   ]
 }
