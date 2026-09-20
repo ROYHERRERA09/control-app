@@ -1,0 +1,2904 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Control</title>
+<meta name="theme-color" content="#16213E" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon-192.png" />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Control" />
+<style>
+  :root { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: #F5F6F8;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+</style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<div id="cc-root"></div>
+<style>
+  #cc-root {
+    --bg: #F5F6F8;
+    --card: #FFFFFF;
+    --navy: #16213E;
+    --navySoft: #6B7A99;
+    --border: #E5E8EE;
+    --yellow: #FFC72C;
+    --yellowSoft: #FFF3D6;
+    --mintBg: #E1F5EC;
+    --mintText: #1E9E6B;
+    --coralBg: #FDE6E3;
+    --coralText: #E0473A;
+    background: var(--bg);
+    color: var(--navy);
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    box-sizing: border-box;
+    position: relative;
+  }
+  #cc-root * { box-sizing: border-box; }
+
+  /* ---- sidebar (slide-in drawer) ---- */
+  .cc-sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 240px; background: #fff;
+    border-right: 1px solid var(--border);
+    padding: calc(20px + env(safe-area-inset-top, 0px)) 14px calc(20px + env(safe-area-inset-bottom, 0px));
+    transform: translateX(-105%); transition: transform .26s cubic-bezier(.32,.72,0,1);
+    z-index: 70; overflow-y: auto;
+  }
+  .cc-sidebar.open { transform: translateX(0); }
+  .cc-sidebar-overlay { position: fixed; inset: 0; background: rgba(22,33,62,.42); z-index: 65; opacity: 0; pointer-events: none; transition: opacity .22s ease; }
+  .cc-sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+  .cc-main { flex: 1; min-width: 0; }
+  .cc-sb-logo-row { display: flex; align-items: center; gap: 8px; margin-bottom: 18px; padding: 0 6px; }
+  .cc-logo { width: 30px; height: 30px; background: var(--yellow); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--navy); font-weight: 800; font-size: 15px; flex: none; }
+  .cc-brand { font-weight: 800; font-size: 15px; color: var(--navy); }
+  .cc-sb-profile { display: flex; align-items: center; gap: 10px; padding: 8px 6px; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 16px; }
+  .cc-avatar { width: 34px; height: 34px; border-radius: 50%; background: #EEE7FA; color: #7C5CBF; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; flex: none; }
+  .cc-sb-profile-name { font-size: 13px; font-weight: 700; color: var(--navy); margin: 0; }
+  .cc-sb-profile-role { font-size: 11px; color: var(--navySoft); margin: 0; }
+  .cc-sb-section { font-size: 10.5px; font-weight: 700; letter-spacing: .04em; color: var(--navySoft); margin: 14px 6px 6px; text-transform: uppercase; }
+  .cc-nav-item {
+    display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; background: none; border: none;
+    padding: 9px 7px; border-radius: 8px; font-size: 12.5px; font-weight: 600; color: var(--navy); cursor: pointer; font: inherit; line-height: 1.25;
+    transition: background-color .15s ease, transform .1s ease;
+  }
+  .cc-nav-item:active { transform: scale(0.97); }
+  .cc-nav-item .cc-nav-icon { width: 20px; text-align: center; flex: none; font-size: 13.5px; }
+  .cc-nav-item.active { background: var(--yellowSoft); color: var(--navy); font-weight: 800; }
+  .cc-nav-item.logout { color: #E0473A; margin-top: 10px; }
+  .cc-sb-version { font-size: 9px; color: var(--navySoft); text-align: center; margin-top: 18px; }
+
+  /* ---- bottom tab bar ---- */
+  .cc-bottomnav {
+    position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--border);
+    display: flex; z-index: 44; padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .cc-bottomnav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 8px 4px 7px; background: none; border: none; font: inherit; cursor: pointer;
+    color: var(--navySoft); font-size: 10.5px; font-weight: 700; transition: color .15s ease;
+  }
+  .cc-bottomnav-item.active { color: var(--navy); }
+  .cc-bottomnav-icon { font-size: 19px; line-height: 1; }
+  .cc-bottomnav-icon.active-dot { position: relative; }
+
+  /* ---- Inicio (home) page ---- */
+  .cc-home-hero { background: var(--card); border-radius: 18px; padding: 18px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(22,33,62,0.06); }
+  .cc-home-hero-top { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 2px; }
+  .cc-home-hero-main { min-width: 0; flex: 1 1 auto; }
+  .cc-home-hero-label { font-size: 13px; color: var(--navySoft); font-weight: 600; margin: 0 0 4px; }
+  .cc-home-hero-amount { font-size: 28px; font-weight: 800; color: var(--navy); margin: 0; font-variant-numeric: tabular-nums; word-break: break-word; line-height: 1.15; }
+  .cc-home-vs { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; flex: none; }
+  .cc-home-vs.up { background: var(--mintBg); color: var(--mintText); }
+  .cc-home-vs.down { background: var(--coralBg); color: var(--coralText); }
+  .cc-home-split { display: flex; border-top: 1px solid var(--border); margin-top: 14px; padding-top: 14px; gap: 10px; }
+  .cc-home-split-col { flex: 1; }
+  .cc-home-split-amount { font-size: 18px; font-weight: 800; margin: 0 0 2px; font-variant-numeric: tabular-nums; }
+  .cc-home-split-label { font-size: 11.5px; color: var(--navySoft); margin: 0; }
+  .cc-home-cta {
+    width: 100%; margin-top: 16px; background: var(--navy); color: #fff; border: none; border-radius: 999px;
+    padding: 14px; font-size: 14px; font-weight: 800; cursor: pointer; font: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: transform .12s ease, opacity .12s ease;
+  }
+  .cc-home-cta:active { transform: scale(0.98); opacity: .92; }
+  .cc-home-section-title { font-size: 15px; font-weight: 800; color: var(--navy); margin: 0 0 12px; }
+  .cc-home-carousel { display: flex; gap: 6px; margin-bottom: 20px; }
+  .cc-home-card {
+    flex: 1 1 0; min-width: 0; background: var(--card); border-radius: 12px; padding: 10px 4px; text-align: center;
+    box-shadow: 0 2px 10px rgba(22,33,62,0.06); border: none; font: inherit; cursor: pointer;
+    transition: transform .12s ease;
+  }
+  .cc-home-card:active { transform: scale(0.95); }
+  .cc-home-card-icon { font-size: 21px; margin-bottom: 6px; }
+  .cc-home-card-label { font-size: 10px; font-weight: 700; color: var(--navy); line-height: 1.2; word-break: break-word; }
+  .cc-home-stats-row { display: flex; gap: 10px; }
+  .cc-home-stat-card { flex: 1; background: var(--bg); border-radius: 12px; padding: 12px; }
+  .cc-home-stat-title { font-size: 11px; color: var(--navySoft); font-weight: 700; margin: 0 0 8px; }
+  .cc-home-stat-value { font-size: 16px; font-weight: 800; color: var(--navy); margin: 0 0 4px; }
+  .cc-home-stat-sub { font-size: 10.5px; color: var(--navySoft); margin: 0; }
+  .cc-home-viewall { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; background: none; border: none; color: var(--navy); font-weight: 700; font-size: 12.5px; padding: 12px 0 0; cursor: pointer; font: inherit; }
+
+  /* ---- main ---- */
+  .cc-wrap { max-width: 560px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(84px + env(safe-area-inset-bottom, 0px)); }
+
+  .cc-topbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .cc-hamburger { background: var(--card); border: 1px solid var(--border); border-radius: 8px; width: 34px; height: 34px; flex: none; font-size: 15px; color: var(--navy); cursor: pointer; transition: transform .12s ease; }
+  .cc-hamburger:active { transform: scale(0.92); }
+  .cc-page-title { font-size: 19px; font-weight: 800; color: var(--navy); flex: 1; margin: 0; }
+  .cc-header-actions { display: flex; gap: 8px; margin-bottom: 14px; }
+  .cc-btn-navy { background: var(--navy); color: #fff; border: none; border-radius: 999px; padding: 9px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; font: inherit; flex: 1; white-space: nowrap; transition: transform .12s ease, opacity .12s ease; }
+  .cc-btn-navy:active { transform: scale(0.96); opacity: .9; }
+  .cc-btn-outline { background: var(--card); color: var(--navy); border: 1px solid var(--border); border-radius: 999px; padding: 9px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; font: inherit; flex: 1; white-space: nowrap; transition: transform .12s ease, background-color .12s ease; }
+  .cc-btn-outline:active { transform: scale(0.96); background: var(--bg); }
+
+  .cc-filter-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .cc-filter-btn { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 12.5px; font-weight: 700; color: var(--navy); cursor: pointer; font: inherit; display: flex; align-items: center; gap: 6px; }
+  .cc-filter-btn.on { background: var(--navy); color: #fff; border-color: transparent; }
+  .cc-select-wrap { position: relative; flex: 1; min-width: 110px; }
+  .cc-select {
+    appearance: none; -webkit-appearance: none; width: 100%; background: var(--card);
+    border: 1px solid var(--border); border-radius: 10px; padding: 9px 28px 9px 12px;
+    font-size: 12.5px; font-weight: 700; color: var(--navy); font: inherit; cursor: pointer;
+  }
+  .cc-select-chevron { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--navySoft); font-size: 10px; pointer-events: none; }
+  .cc-range-pill { flex: 1; min-width: 120px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 12.5px; font-weight: 600; color: var(--navySoft); display: flex; align-items: center; justify-content: center; }
+  .cc-search-wrap { position: relative; margin-bottom: 14px; }
+  .cc-search { width: 100%; border: 1px solid var(--border); background: var(--card); border-radius: 10px; padding: 10px 12px 10px 32px; font-size: 13px; font: inherit; color: var(--navy); }
+  .cc-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--navySoft); font-size: 13px; }
+  .cc-cat-filter-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .cc-cat-chip { border-radius: 999px; padding: 6px 12px; font-size: 11.5px; font-weight: 600; border: 1px solid var(--border); background: var(--card); color: var(--navySoft); cursor: pointer; font: inherit; }
+  .cc-cat-chip.active { background: var(--navy); color: #fff; border-color: transparent; }
+
+  .cc-stats { display: flex; gap: 8px; margin-bottom: 16px; }
+  .cc-stat { flex: 1; background: var(--card); border-radius: 14px; padding: 12px 10px; box-shadow: 0 2px 10px rgba(22,33,62,0.06); }
+  .cc-stat-icon { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; font-size: 14px; }
+  .cc-stat-icon.navy { background: #EAF0FB; color: var(--navy); }
+  .cc-stat-icon.mint { background: var(--mintBg); color: var(--mintText); }
+  .cc-stat-icon.coral { background: var(--coralBg); color: var(--coralText); }
+  .cc-stat-label { font-size: 11px; color: var(--navySoft); font-weight: 600; margin: 0 0 3px; }
+  .cc-stat-amount { font-size: 15.5px; font-weight: 800; margin: 0; font-variant-numeric: tabular-nums; }
+
+  .cc-card { background: var(--card); border-radius: 14px; padding: 14px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(22,33,62,0.06); }
+  .cc-card-label { color: var(--navySoft); font-size: 12px; font-weight: 700; margin: 0 0 10px; }
+  .cc-chart-svg { width: 100%; height: 150px; display: block; }
+
+  .cc-tabs { display: flex; gap: 16px; border-bottom: 1px solid var(--border); margin-bottom: 4px; overflow-x: auto; }
+  .cc-tab { background: none; border: none; padding: 0 0 10px; font-size: 12.5px; font-weight: 700; color: var(--navySoft); cursor: pointer; font: inherit; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: color .15s ease, border-color .15s ease; }
+  .cc-tab.active { color: var(--navy); border-bottom-color: var(--navy); }
+
+  .cc-pending-total { display: flex; justify-content: space-between; align-items: center; background: var(--yellowSoft); border-radius: 10px; padding: 10px 12px; margin: 10px 0; font-size: 12.5px; font-weight: 700; color: var(--navy); }
+  .cc-pending-total.pagar { background: #EAF0FB; }
+
+  .cc-count-row { display: flex; justify-content: flex-end; margin: 10px 0 6px; }
+  .cc-count { color: var(--navySoft); font-size: 12px; font-weight: 600; }
+
+  .cc-empty { border: 1.5px dashed var(--border); color: var(--navySoft); border-radius: 14px; padding: 30px 16px; text-align: center; font-size: 13px; margin-bottom: 20px; background: var(--card); }
+  .cc-list { list-style: none; margin: 0 0 16px; padding: 0; }
+  .cc-row { display: flex; align-items: center; justify-content: space-between; background: var(--card); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; box-shadow: 0 1px 4px rgba(22,33,62,0.05); }
+  .cc-row-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .cc-badge { border-radius: 50%; width: 32px; height: 32px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; }
+  .cc-row-cat { font-size: 13.5px; font-weight: 700; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--navy); }
+  .cc-row-meta { font-size: 11.5px; color: var(--navySoft); margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cc-row-right { display: flex; align-items: center; gap: 8px; flex: none; }
+  .cc-amount { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .cc-del { background: var(--bg); border: none; color: var(--navySoft); cursor: pointer; width: 24px; height: 24px; border-radius: 50%; font-size: 12px; line-height: 1; }
+
+  .cc-clear-link { background: none; border: none; color: var(--navySoft); text-decoration: underline; font-size: 12px; cursor: pointer; padding: 0; font-weight: 600; }
+  .cc-confirm { display: flex; align-items: center; gap: 10px; font-size: 12px; flex-wrap: wrap; }
+  .cc-confirm button { background: none; border: none; text-decoration: underline; cursor: pointer; font-size: 12px; padding: 0; font-weight: 700; }
+
+  .cc-overlay { position: fixed; inset: 0; background: rgba(22,33,62,0.45); z-index: 50; opacity: 0; pointer-events: none; transition: opacity .22s ease; }
+  .cc-overlay.open { opacity: 1; pointer-events: auto; }
+  .cc-sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 51; background: var(--bg);
+    border-radius: 22px 22px 0 0; padding: 20px 18px calc(28px + env(safe-area-inset-bottom, 0px));
+    max-height: 88vh; overflow-y: auto; max-width: 520px; margin: 0 auto;
+    transform: translateY(110%); transition: transform .32s cubic-bezier(.32,.72,0,1);
+    pointer-events: none; box-shadow: 0 -8px 30px rgba(22,33,62,0.18);
+  }
+  .cc-sheet.open { transform: translateY(0); pointer-events: auto; }
+  .cc-sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .cc-sheet-title { font-size: 16px; font-weight: 800; margin: 0; color: var(--navy); }
+  .cc-x { background: var(--card); border: 1px solid var(--border); color: var(--navySoft); font-size: 14px; cursor: pointer; width: 28px; height: 28px; border-radius: 50%; }
+  .cc-type-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .cc-type-btn { border-radius: 10px; padding: 9px 4px; font-size: 12px; font-weight: 700; border: 1px solid var(--border); background: var(--card); color: var(--navySoft); cursor: pointer; font: inherit; }
+  .cc-type-btn.active-ingreso { background: var(--mintBg); color: var(--mintText); border-color: transparent; }
+  .cc-type-btn.active-egreso { background: var(--coralBg); color: var(--coralText); border-color: transparent; }
+  .cc-type-btn.active-por_cobrar { background: var(--yellowSoft); color: #8A6A00; border-color: transparent; }
+  .cc-type-btn.active-por_pagar { background: #EAF0FB; color: var(--navy); border-color: transparent; }
+  .cc-label { color: var(--navySoft); font-size: 11.5px; font-weight: 700; display: block; margin-bottom: 6px; }
+  .cc-input {
+    width: 100%; border: 1px solid var(--border); background: var(--card); color: var(--navy);
+    border-radius: 10px; padding: 11px 13px; margin-bottom: 14px; font-size: 13.5px; font: inherit;
+  }
+  .cc-input.amount { font-size: 18px; font-weight: 800; }
+  .cc-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .cc-chip { border-radius: 999px; padding: 6px 13px; font-size: 11.5px; font-weight: 600; border: 1px solid var(--border); background: var(--card); color: var(--navySoft); cursor: pointer; font: inherit; }
+  .cc-chip.active { background: var(--navy); color: #fff; border-color: transparent; }
+  .cc-error { color: var(--coralText); font-size: 12px; margin: 0 0 8px; font-weight: 600; }
+  .cc-submit { width: 100%; border: none; color: #fff; background: var(--navy); border-radius: 999px; padding: 14px; font-size: 14px; font-weight: 800; cursor: pointer; margin-top: 4px; transition: transform .12s ease, opacity .12s ease; }
+  .cc-submit:active { transform: scale(0.98); opacity: .92; }
+
+  .cc-fab-yellow { position: fixed; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); right: 22px; background: var(--yellow); color: var(--navy); border: none; border-radius: 50%; width: 56px; height: 56px; font-size: 26px; font-weight: 700; line-height: 1; cursor: pointer; box-shadow: 0 10px 24px rgba(255,199,44,0.45); z-index: 46; transition: transform .15s ease, box-shadow .15s ease; }
+  .cc-fab-yellow:active { transform: scale(0.92); }
+  .cc-toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 12.5px; font-weight: 600; z-index: 80; box-shadow: 0 6px 18px rgba(22,33,62,0.3); }
+  .cc-loading { padding: 60px 20px; text-align: center; color: var(--navySoft); font-size: 14px; }
+
+  /* ---- custom date picker (Monday-first calendar) ---- */
+  .cc-date-trigger {
+    width: 100%; border: 1px solid var(--border); background: var(--card); color: var(--navy);
+    border-radius: 10px; padding: 11px 13px; font-size: 13.5px; font: inherit; text-align: left;
+    cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .cc-date-trigger .cal-ic { color: var(--navySoft); font-size: 13px; }
+  .cc-dp-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .cc-dp-navbtn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); color: var(--navy); font-size: 16px; cursor: pointer; transition: transform .12s ease; }
+  .cc-dp-navbtn:active { transform: scale(0.9); }
+  .cc-dp-navlabel { font-size: 14px; font-weight: 800; color: var(--navy); text-transform: capitalize; }
+  .cc-dp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cc-dp-dow { text-align: center; font-size: 10px; font-weight: 700; color: var(--navySoft); padding-bottom: 8px; }
+  .cc-dp-cell {
+    aspect-ratio: 1; border: none; background: none; border-radius: 50%; font-size: 13px; font-weight: 600;
+    color: var(--navy); cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: transform .1s ease;
+  }
+  .cc-dp-cell.empty { cursor: default; }
+  .cc-dp-cell:not(.empty):active { transform: scale(0.88); background: var(--bg); }
+  .cc-dp-cell.today { color: #8A6A00; font-weight: 800; box-shadow: inset 0 0 0 1.5px var(--yellow); }
+  .cc-dp-cell.selected { background: var(--navy); color: #fff; }
+  .cc-dp-cell.selected.today { box-shadow: none; color: #fff; }
+
+  /* ---- Vender page ---- */
+  .cc-product-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 100px; }
+  .cc-product-card { background: var(--card); border-radius: 14px; padding: 12px; box-shadow: 0 2px 10px rgba(22,33,62,0.06); position: relative; cursor: pointer; border: 1.5px solid transparent; text-align: left; font: inherit; transition: transform .12s ease, box-shadow .12s ease; }
+  .cc-product-card:active { transform: scale(0.96); box-shadow: 0 1px 4px rgba(22,33,62,0.08); }
+  .cc-product-card:active { border-color: var(--yellow); }
+  .cc-product-name { font-size: 13.5px; font-weight: 700; color: var(--navy); margin: 0 0 4px; }
+  .cc-product-price { font-size: 14px; font-weight: 800; color: var(--mintText); margin: 0; }
+  .cc-product-stock { font-size: 11px; color: var(--navySoft); margin: 4px 0 0; }
+  .cc-product-stock.low { color: var(--coralText); font-weight: 700; }
+  .cc-product-qty-badge { position: absolute; top: -8px; right: -8px; background: var(--navy); color: #fff; border-radius: 999px; min-width: 22px; height: 22px; padding: 0 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; }
+  .cc-product-del { position: absolute; bottom: 8px; right: 8px; background: var(--bg); border: none; color: var(--navySoft); width: 22px; height: 22px; border-radius: 50%; font-size: 11px; cursor: pointer; }
+
+  .cc-cart-bar { position: fixed; left: 12px; right: 12px; bottom: calc(74px + env(safe-area-inset-bottom, 0px)); background: var(--navy); color: #fff; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; z-index: 45; max-width: 496px; margin: 0 auto; border-radius: 16px; box-shadow: 0 8px 20px rgba(22,33,62,0.3); }
+  .cc-cart-info { font-size: 12.5px; font-weight: 700; line-height: 1.3; }
+  .cc-cart-info b { font-size: 15px; }
+  .cc-cart-btn { background: var(--yellow); color: var(--navy); border: none; border-radius: 999px; padding: 10px 18px; font-size: 13px; font-weight: 800; cursor: pointer; font: inherit; }
+
+  .cc-checkout-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 8px; }
+  .cc-checkout-item-name { font-size: 13.5px; font-weight: 700; color: var(--navy); margin: 0; }
+  .cc-checkout-item-sub { font-size: 11.5px; color: var(--navySoft); margin: 0; }
+  .cc-qty-stepper { display: flex; align-items: center; gap: 8px; flex: none; }
+  .cc-qty-btn { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); color: var(--navy); font-size: 14px; font-weight: 700; cursor: pointer; }
+  .cc-qty-val { font-size: 13px; font-weight: 700; min-width: 16px; text-align: center; }
+  .cc-checkout-total-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0 6px; font-size: 15px; font-weight: 800; color: var(--navy); }
+
+  /* ---- Estadísticas page ---- */
+  .cc-stat-row { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .cc-stat-row:last-child { border-bottom: none; }
+  .cc-stat-row-rank { width: 22px; height: 22px; border-radius: 50%; background: var(--mintBg); color: var(--mintText); font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex: none; margin-top: 2px; }
+  .cc-stat-row-main { flex: 1; min-width: 0; }
+  .cc-stat-row-top { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 5px; gap: 8px; }
+  .cc-stat-row-top span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cc-stat-bar-track { background: var(--bg); border-radius: 999px; height: 6px; overflow: hidden; }
+  .cc-stat-bar-fill { height: 100%; border-radius: 999px; }
+  .cc-stat-row-sub { font-size: 11px; color: var(--navySoft); margin: 4px 0 0; }
+  .cc-comingsoon-card { flex: 1; background: var(--card); border: none; border-radius: 14px; padding: 12px 10px; text-align: left; font: inherit; cursor: pointer; opacity: .6; }
+
+  /* ---- Inventario page ---- */
+  .cc-stock-adjust { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+  .cc-lowstock-badge { background: var(--coralBg); color: var(--coralText); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+
+  /* ---- Ayuda page ---- */
+  .cc-faq-item { background: var(--card); border-radius: 14px; margin-bottom: 10px; box-shadow: 0 2px 10px rgba(22,33,62,0.06); overflow: hidden; }
+  .cc-faq-q { width: 100%; text-align: left; background: none; border: none; padding: 14px 16px; font-size: 13.5px; font-weight: 700; color: var(--navy); cursor: pointer; font: inherit; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .cc-faq-chevron { color: var(--navySoft); font-size: 12px; transition: transform .15s ease; flex: none; }
+  .cc-faq-chevron.open { transform: rotate(180deg); }
+  .cc-faq-a { padding: 0 16px 14px; font-size: 12.5px; color: var(--navySoft); line-height: 1.5; }
+  .cc-sb-profile-btn { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: none; border: none; padding: 8px 6px; margin-bottom: 14px; border-bottom: 1px solid var(--border); padding-bottom: 16px; cursor: pointer; font: inherit; }
+  .cc-sb-profile-edit-icon { margin-left: auto; color: var(--navySoft); font-size: 12px; flex: none; }
+</style>
+<script>
+(function () {
+  // Persistent storage: uses the browser's own localStorage so data is saved
+  // on this device whether the app runs inside Claude or as an installed page.
+  const storage = {
+    async get(key) {
+      const v = localStorage.getItem(key);
+      if (v === null || v === undefined) throw new Error("not found");
+      return { key, value: v, shared: false };
+    },
+    async set(key, value) {
+      localStorage.setItem(key, value);
+      return { key, value, shared: false };
+    },
+  };
+  const STORAGE_KEY = "caja_clara_movimientos";
+  const PRODUCTS_KEY = "caja_clara_productos";
+  const VENTAS_DETALLE_KEY = "caja_clara_ventas_detalle";
+  const CLIENTES_KEY = "caja_clara_clientes";
+  const CLIENTE_MOV_KEY = "caja_clara_cliente_movimientos";
+  const PROVEEDORES_KEY = "caja_clara_proveedores";
+  const PROVEEDOR_MOV_KEY = "caja_clara_proveedor_movimientos";
+  const SETTINGS_KEY = "caja_clara_settings";
+  const CATS = {
+    ingreso: ["Ventas", "Servicios", "Cobros", "Otros ingresos"],
+    egreso: ["Inventario", "Alimentación", "Transporte", "Servicios", "Arriendo", "Proveedor", "Otros gastos"],
+    por_cobrar: ["Cliente", "Préstamo dado", "Otro por cobrar"],
+    por_pagar: ["Proveedor", "Préstamo recibido", "Otro por pagar"],
+  };
+  const MEDIOS = ["Efectivo", "Transferencia", "Tarjeta", "Otro"];
+  const TABS = [
+    { key: "ingreso", label: "Ingresos" },
+    { key: "egreso", label: "Egresos" },
+    { key: "por_cobrar", label: "Por cobrar" },
+    { key: "por_pagar", label: "Por pagar" },
+  ];
+  const PERIODS = [
+    { key: "day", label: "Diario" },
+    { key: "week", label: "Semanal" },
+    { key: "month", label: "Mensual" },
+    { key: "year", label: "Anual" },
+  ];
+  const NAV_ITEMS = [
+    { key: "home", label: "Inicio", icon: "🏠" },
+    { key: "balance", label: "Balance", icon: "📊" },
+    { key: "vender", label: "Vender", icon: "🏷" },
+    { key: "estadisticas", label: "Estadísticas", icon: "📈" },
+    { key: "inventario", label: "Inventario", icon: "📦" },
+  ];
+  const NAV_ITEMS2 = [
+    { key: "clientes", label: "Clientes", icon: "👤" },
+    { key: "proveedores", label: "Proveedores", icon: "🚚" },
+    { key: "config", label: "Configuraciones", icon: "⚙" },
+    { key: "ayuda", label: "Ayuda", icon: "❓" },
+  ];
+  const BOTTOM_NAV = [
+    { key: "home", label: "Inicio", icon: "🏠" },
+    { key: "balance", label: "Balance", icon: "📊" },
+    { key: "deudas", label: "Deudas", icon: "💳" },
+    { key: "inventario", label: "Inventario", icon: "📦" },
+  ];
+
+  let page = "home";
+  let movimientos = [];
+  let productos = [];
+  let ventasDetalle = [];
+  let clientes = [];
+  let clienteMovimientos = [];
+  let loaded = false;
+  let productosLoaded = false;
+  let ventasDetalleLoaded = false;
+  let clientesLoaded = false;
+  let clienteMovLoaded = false;
+  let period = "week";
+  let tab = "ingreso";
+  let search = "";
+  let showFilterPanel = false;
+  let filterCategory = null;
+  let sidebarOpen = false;
+  let cajaAbierta = false;
+  let toast = null;
+  let toastTimer = null;
+  let showForm = false;
+  let confirmClear = false;
+  let errorMsg = "";
+  let fType = "ingreso";
+  let fAmount = "";
+  let fCategory = "";
+  let fMedio = "Efectivo";
+  let fNote = "";
+  let fDate = todayStr();
+  let editingMovimientoId = null;
+  let showExportDialog = false;
+
+  // Vender state
+  let productSearch = "";
+  let cart = {}; // productId -> qty
+  let showCheckout = false;
+  let showProductForm = false;
+  let pFormName = "";
+  let pFormPrice = "";
+  let pFormStock = "";
+  let ventaMedio = "Efectivo";
+  let ventaError = "";
+  let statsPeriod = "week";
+  let selectedYear = new Date().getFullYear();
+  let selectedMonth = new Date().getMonth();
+  let selectedWeekDate = todayStr();
+  let selectedDay = todayStr();
+  let datePickerOpen = false;
+  let datePickerTarget = null; // "movdate" | "weekdate" | "daydate"
+  let datePickerViewYear = new Date().getFullYear();
+  let datePickerViewMonth = new Date().getMonth();
+  const MONTH_NAMES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+  let invSearch = "";
+  let editingProductId = null;
+  let confirmDeleteProductId = null;
+
+  // Clientes state
+  let clienteSearch = "";
+  let showClientForm = false;
+  let editingClienteId = null;
+  let cFormName = "";
+  let cFormPhone = "";
+  let clienteFormError = "";
+  let confirmDeleteClienteId = null;
+  let showClienteDetail = false;
+  let detailClienteId = null;
+  let activeClienteAction = null; // 'fiado' | 'abono' | null
+  let fiadoAmount = "";
+  let fiadoNote = "";
+  let abonoAmount = "";
+  let abonoNote = "";
+
+  // Proveedores state
+  let proveedores = [];
+  let proveedorMovimientos = [];
+  let proveedoresLoaded = false;
+  let proveedorMovLoaded = false;
+  let proveedorSearch = "";
+  let showProveedorForm = false;
+  let editingProveedorId = null;
+  let pvFormName = "";
+  let pvFormPhone = "";
+  let proveedorFormError = "";
+  let confirmDeleteProveedorId = null;
+  let showProveedorDetail = false;
+  let detailProveedorId = null;
+  let activeProveedorAction = null; // 'compra' | 'pago' | null
+  let compraAmount = "";
+  let compraNote = "";
+  let pagoAmount = "";
+  let pagoNote = "";
+
+  // Configuraciones state
+  let settings = { businessName: "Mi negocio", ownerName: "Propietario", currency: "$", pin: null };
+  let settingsLoaded = false;
+  let cfgBusinessName = "";
+  let cfgOwnerName = "";
+  let cfgCurrency = "";
+  let confirmResetAll = false;
+  let showProfileEditSheet = false;
+
+  // Seguridad / bloqueo state
+  let sessionLocked = false;
+  let lockPinInput = "";
+  let lockError = "";
+  let secNewPin = "";
+  let secConfirmPin = "";
+  let secCurrentPin = "";
+  let secError = "";
+  let showRemovePinConfirm = false;
+
+  // Ayuda state
+  let expandedHelpId = null;
+  const HELP_ITEMS = [
+    { id: "venta", q: "¿Cómo registro una venta?", a: "Ve a \"Vender\", toca los productos que vendiste para agregarlos al carrito (o ajusta cantidades desde el carrito), y presiona \"Cobrar\". Eliges el medio de pago y confirmas: la venta queda registrada sola en Balance como ingreso, y si el producto tiene stock, se descuenta automáticamente." },
+    { id: "gastos", q: "¿Cómo registro un gasto?", a: "En \"Balance\", toca el botón amarillo \"+\" y elige \"Egreso\". Escribe el monto, escoge o crea una categoría, el medio de pago y una nota opcional." },
+    { id: "porcobrarpagar", q: "¿Qué son \"Por cobrar\" y \"Por pagar\"?", a: "\"Por cobrar\" es dinero que otras personas te deben (fiados a tus clientes). \"Por pagar\" es dinero que tú debes (compras a crédito con tus proveedores). Ambos se gestionan más fácil desde las secciones \"Clientes\" y \"Proveedores\", o puedes registrarlos manualmente desde Balance." },
+    { id: "inventario", q: "¿Cómo administro mi inventario?", a: "En \"Inventario\" ves todos tus productos con su stock. Usa los botones −/+ para ajustar el stock rápidamente, o toca ✎ para editar el nombre, precio o stock de un producto. Este es el mismo catálogo que usas en \"Vender\"." },
+    { id: "fiado", q: "¿Cómo llevo el fiado de mis clientes?", a: "En \"Clientes\", agrega a la persona y toca su nombre para abrir su ficha. Ahí puedes registrar un \"+ Fiado\" (cuando le fías algo) o un \"Registrar abono\" (cuando te paga). Su saldo se actualiza solo, y también queda reflejado en Balance." },
+    { id: "proveedores", q: "¿Y las deudas con mis proveedores?", a: "Funciona igual que Clientes, pero al revés: en \"Proveedores\" registras \"+ Compra\" cuando compras a crédito, y \"Registrar pago\" cuando les pagas. Verás cuánto le debes a cada uno." },
+    { id: "periodo", q: "¿Cómo veo mis totales por día, semana, mes o año?", a: "En \"Balance\", usa el selector de período (Diario/Semanal/Mensual/Anual). Las tarjetas de arriba y la gráfica de tendencia se ajustan automáticamente a lo que elijas." },
+    { id: "datos", q: "¿Mis datos se comparten con alguien?", a: "No. Todo lo que registras se guarda únicamente en tu propia cuenta, de forma privada. Control no tiene servidores ni usuarios externos: es una herramienta personal." },
+    { id: "respaldo", q: "¿Cómo hago un respaldo de mis datos?", a: "Ve a \"Configuraciones\" → \"Descargar respaldo completo\". Se descarga un archivo con todo tu historial: ventas, productos, clientes, proveedores y ajustes." },
+  ];
+
+  function uid() { return Math.random().toString(36).slice(2, 10); }
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function toDate(dateStr) { return new Date(dateStr + "T12:00:00"); }
+  function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+  function startOfWeek(d) { const x = startOfDay(d); const day = x.getDay(); const diff = (day === 0 ? -6 : 1) - day; x.setDate(x.getDate() + diff); return x; }
+  function startOfMonth(d) { const x = startOfDay(d); x.setDate(1); return x; }
+  function startOfYear(d) { const x = startOfDay(d); x.setMonth(0, 1); return x; }
+  function money(n) {
+    const sign = n < 0 ? "-" : "";
+    const v = Math.abs(Math.round(n));
+    return sign + settings.currency + v.toLocaleString("es-CO");
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function rangeFor(p, now) {
+    if (p === "day") return [startOfDay(now), new Date(startOfDay(now).getTime() + 86400000)];
+    if (p === "week") { const s = startOfWeek(now); return [s, new Date(s.getTime() + 7 * 86400000)]; }
+    if (p === "month") { const s = startOfMonth(now); const e = new Date(s); e.setMonth(e.getMonth() + 1); return [s, e]; }
+    const s = startOfYear(now); const e = new Date(s); e.setFullYear(e.getFullYear() + 1); return [s, e];
+  }
+  function rangeLabel(p, now) {
+    const [s, e] = rangeFor(p, now);
+    const endIncl = new Date(e.getTime() - 86400000);
+    const fmt = (d) => d.toLocaleDateString("es-CO", { day: "numeric", month: "short" });
+    if (p === "day") return fmt(s);
+    if (p === "year") return String(s.getFullYear());
+    return fmt(s) + " | " + fmt(endIncl);
+  }
+  function weekRangeLabel(s, endIncl, short) {
+    const d1 = s.getDate(), d2 = endIncl.getDate();
+    const m1 = s.toLocaleDateString("es-CO", { month: short ? "short" : "long" });
+    const m2 = endIncl.toLocaleDateString("es-CO", { month: short ? "short" : "long" });
+    if (m1 === m2) return short ? `${d1}-${d2} ${m1}` : `${d1} al ${d2} de ${m1}`;
+    return short ? `${d1} ${m1}\n${d2} ${m2}` : `${d1} de ${m1} al ${d2} de ${m2}`;
+  }
+
+  function bucketsFor(p, now) {
+    const buckets = [];
+    const RANGE = 3;
+    if (p === "day") {
+      for (let i = -RANGE; i <= RANGE; i++) {
+        const s = new Date(startOfDay(now).getTime() + i * 86400000);
+        const e = new Date(s.getTime() + 86400000);
+        buckets.push({ start: s, end: e, label: s.toLocaleDateString("es-CO", { weekday: "short" }) + " " + s.getDate(), current: i === 0 });
+      }
+    } else if (p === "week") {
+      const weekStart = startOfWeek(now);
+      const todayStart = startOfDay(now).getTime();
+      for (let i = 0; i < 7; i++) {
+        const s = new Date(weekStart.getTime() + i * 86400000);
+        const e = new Date(s.getTime() + 86400000);
+        buckets.push({ start: s, end: e, label: s.toLocaleDateString("es-CO", { weekday: "short" }) + " " + s.getDate(), current: s.getTime() === todayStart });
+      }
+    } else if (p === "month") {
+      const curStart = startOfMonth(now);
+      for (let i = -RANGE; i <= RANGE; i++) {
+        const s = new Date(curStart);
+        s.setMonth(s.getMonth() + i);
+        const e = new Date(s);
+        e.setMonth(e.getMonth() + 1);
+        buckets.push({ start: s, end: e, label: s.toLocaleDateString("es-CO", { month: "short" }), current: i === 0 });
+      }
+    } else {
+      const curStart = startOfYear(now);
+      for (let i = -RANGE; i <= RANGE; i++) {
+        const s = new Date(curStart);
+        s.setFullYear(s.getFullYear() + i);
+        const e = new Date(s);
+        e.setFullYear(e.getFullYear() + 1);
+        buckets.push({ start: s, end: e, label: String(s.getFullYear()), current: i === 0 });
+      }
+    }
+    return buckets;
+  }
+  function chartCaption(p, now) {
+    if (p === "day") {
+      const isToday = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0") === todayStr();
+      const label = now.toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" });
+      return isToday ? "Hoy, " + label : "Día: " + label;
+    }
+    if (p === "week") {
+      const s = startOfWeek(now);
+      const e = new Date(s.getTime() + 6 * 86400000);
+      return "Semana: " + weekRangeLabel(s, e, false);
+    }
+    if (p === "month") return "Mes: " + now.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+    return "Año: " + now.getFullYear();
+  }
+
+  async function loadData() {
+    try {
+      const res = await storage.get(STORAGE_KEY);
+      if (res && res.value) movimientos = JSON.parse(res.value);
+    } catch (e) {
+      movimientos = [];
+    } finally {
+      loaded = true;
+      render();
+    }
+  }
+  async function saveData() {
+    try {
+      await storage.set(STORAGE_KEY, JSON.stringify(movimientos));
+    } catch (e) {
+      showToast("No se pudo guardar. Intenta de nuevo.");
+    }
+  }
+  async function loadProducts() {
+    try {
+      const res = await storage.get(PRODUCTS_KEY);
+      if (res && res.value) productos = JSON.parse(res.value);
+    } catch (e) {
+      productos = [];
+    } finally {
+      productosLoaded = true;
+      render();
+    }
+  }
+  async function saveProducts() {
+    try {
+      await storage.set(PRODUCTS_KEY, JSON.stringify(productos));
+    } catch (e) {
+      showToast("No se pudo guardar el producto.");
+    }
+  }
+  async function loadVentasDetalle() {
+    try {
+      const res = await storage.get(VENTAS_DETALLE_KEY);
+      if (res && res.value) ventasDetalle = JSON.parse(res.value);
+    } catch (e) {
+      ventasDetalle = [];
+    } finally {
+      ventasDetalleLoaded = true;
+      render();
+    }
+  }
+  async function saveVentasDetalle() {
+    try {
+      await storage.set(VENTAS_DETALLE_KEY, JSON.stringify(ventasDetalle));
+    } catch (e) {
+      showToast("No se pudo guardar el detalle de la venta.");
+    }
+  }
+  async function loadClientes() {
+    try {
+      const res = await storage.get(CLIENTES_KEY);
+      if (res && res.value) clientes = JSON.parse(res.value);
+    } catch (e) {
+      clientes = [];
+    } finally {
+      clientesLoaded = true;
+      render();
+    }
+  }
+  async function saveClientes() {
+    try {
+      await storage.set(CLIENTES_KEY, JSON.stringify(clientes));
+    } catch (e) {
+      showToast("No se pudo guardar el cliente.");
+    }
+  }
+  async function loadClienteMov() {
+    try {
+      const res = await storage.get(CLIENTE_MOV_KEY);
+      if (res && res.value) clienteMovimientos = JSON.parse(res.value);
+    } catch (e) {
+      clienteMovimientos = [];
+    } finally {
+      clienteMovLoaded = true;
+      render();
+    }
+  }
+  async function saveClienteMov() {
+    try {
+      await storage.set(CLIENTE_MOV_KEY, JSON.stringify(clienteMovimientos));
+    } catch (e) {
+      showToast("No se pudo guardar el movimiento del cliente.");
+    }
+  }
+  function clienteBalance(clienteId) {
+    return clienteMovimientos
+      .filter((m) => m.clienteId === clienteId)
+      .reduce((sum, m) => sum + (m.tipo === "fiado" ? m.monto : -m.monto), 0);
+  }
+  async function loadProveedores() {
+    try {
+      const res = await storage.get(PROVEEDORES_KEY);
+      if (res && res.value) proveedores = JSON.parse(res.value);
+    } catch (e) {
+      proveedores = [];
+    } finally {
+      proveedoresLoaded = true;
+      render();
+    }
+  }
+  async function saveProveedores() {
+    try {
+      await storage.set(PROVEEDORES_KEY, JSON.stringify(proveedores));
+    } catch (e) {
+      showToast("No se pudo guardar el proveedor.");
+    }
+  }
+  async function loadProveedorMov() {
+    try {
+      const res = await storage.get(PROVEEDOR_MOV_KEY);
+      if (res && res.value) proveedorMovimientos = JSON.parse(res.value);
+    } catch (e) {
+      proveedorMovimientos = [];
+    } finally {
+      proveedorMovLoaded = true;
+      render();
+    }
+  }
+  async function saveProveedorMov() {
+    try {
+      await storage.set(PROVEEDOR_MOV_KEY, JSON.stringify(proveedorMovimientos));
+    } catch (e) {
+      showToast("No se pudo guardar el movimiento del proveedor.");
+    }
+  }
+  function proveedorBalance(proveedorId) {
+    return proveedorMovimientos
+      .filter((m) => m.proveedorId === proveedorId)
+      .reduce((sum, m) => sum + (m.tipo === "compra" ? m.monto : -m.monto), 0);
+  }
+  async function loadSettings() {
+    try {
+      const res = await storage.get(SETTINGS_KEY);
+      if (res && res.value) settings = Object.assign({}, settings, JSON.parse(res.value));
+    } catch (e) {
+      // keep defaults
+    } finally {
+      settingsLoaded = true;
+      if (settings.pin) sessionLocked = true;
+      render();
+    }
+  }
+  async function saveSettings() {
+    try {
+      await storage.set(SETTINGS_KEY, JSON.stringify(settings));
+    } catch (e) {
+      showToast("No se pudo guardar la configuración.");
+    }
+  }
+  let downloadsCapPromise = null;
+  function getDownloadsCapability() {
+    if (!downloadsCapPromise) {
+      downloadsCapPromise = (window.claude && typeof window.claude.use === "function")
+        ? window.claude.use("downloads")
+        : Promise.resolve(null);
+    }
+    return downloadsCapPromise;
+  }
+  function downloadErrorMessage(err) {
+    const code = err && err.code;
+    if (code === "declined") return "Descarga cancelada";
+    if (code === "unavailable" || code === "not_granted" || code === "capability_disabled" || code === "capability_removed") {
+      return "Las descargas no están disponibles aquí. Prueba abriendo esta página en tu navegador.";
+    }
+    if (code === "rate_limited") return "Espera un momento e inténtalo de nuevo";
+    if (code === "too_large") return "El archivo es demasiado grande para descargar aquí";
+    return "No se pudo generar el archivo";
+  }
+
+  function browserDownload(filename, data, mime) {
+    const blob = data instanceof Blob ? data : new Blob([data], { type: mime || "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return { status: "saved" };
+  }
+
+  async function downloadJSON(obj, filename) {
+    const json = JSON.stringify(obj, null, 2);
+    const dl = await getDownloadsCapability();
+    if (dl) return dl.save({ filename, data: json });
+    return browserDownload(filename, json, "application/json;charset=utf-8;");
+  }
+  async function resetAllData() {
+    movimientos = []; productos = []; ventasDetalle = [];
+    clientes = []; clienteMovimientos = [];
+    proveedores = []; proveedorMovimientos = [];
+    settings = { businessName: "Mi negocio", ownerName: "Propietario", currency: "$", pin: null };
+    await Promise.all([
+      saveData(), saveProducts(), saveVentasDetalle(),
+      saveClientes(), saveClienteMov(), saveProveedores(), saveProveedorMov(), saveSettings(),
+    ]);
+  }
+
+  function showToast(msg) {
+    toast = msg;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast = null; render(); }, 2200);
+    render();
+  }
+
+  function chartSVG(now) {
+    const buckets = bucketsFor(period, now);
+    const data = buckets.map((b) => {
+      let ing = 0, eg = 0;
+      movimientos.forEach((m) => {
+        const t = toDate(m.date).getTime();
+        if (t >= b.start.getTime() && t < b.end.getTime()) { if (m.type === "ingreso") ing += m.amount; else if (m.type === "egreso") eg += m.amount; }
+      });
+      return { label: b.label, ing, eg, current: b.current };
+    });
+    const max = Math.max(1, ...data.map((d) => Math.max(d.ing, d.eg)));
+    const W = 320, H = 150, padBottom = 28, padTop = 6;
+    const n = data.length;
+    const groupW = W / n;
+    const barW = Math.min(16, groupW / 3);
+    let bars = "";
+    data.forEach((d, i) => {
+      const cx = i * groupW + groupW / 2;
+      const ingH = (d.ing / max) * (H - padTop - padBottom);
+      const egH = (d.eg / max) * (H - padTop - padBottom);
+      const baseY = H - padBottom;
+      if (d.current) {
+        bars += `<rect x="${i * groupW + 1}" y="0" width="${groupW - 2}" height="${H - padBottom}" fill="#FFF3D6" rx="6"/>`;
+      }
+      bars += `<rect x="${cx - barW - 2}" y="${baseY - ingH}" width="${barW}" height="${Math.max(ingH, 0.5)}" fill="#1E9E6B" rx="4"/>`;
+      bars += `<rect x="${cx + 2}" y="${baseY - egH}" width="${barW}" height="${Math.max(egH, 0.5)}" fill="#E0473A" rx="4"/>`;
+      const labelLines = String(d.label).includes("\n") ? d.label.split("\n") : String(d.label).split(" ");
+      const lineY1 = H - 16, lineY2 = H - 6;
+      const weight = d.current ? "800" : "600";
+      const color = d.current ? "#16213E" : "#6B7A99";
+      if (labelLines.length > 1 && String(d.label).length > 6) {
+        bars += `<text x="${cx}" y="${lineY1}" font-size="9" fill="${color}" text-anchor="middle" font-weight="${weight}">${esc(labelLines[0])}</text>`;
+        bars += `<text x="${cx}" y="${lineY2}" font-size="9" fill="${color}" text-anchor="middle" font-weight="${weight}">${esc(labelLines.slice(1).join(" "))}</text>`;
+      } else {
+        bars += `<text x="${cx}" y="${lineY2}" font-size="9.5" fill="${color}" text-anchor="middle" font-weight="${weight}">${esc(d.label)}</text>`;
+      }
+    });
+    return `<svg class="cc-chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+      <line x1="0" y1="${H - padBottom}" x2="${W}" y2="${H - padBottom}" stroke="#E5E8EE" />
+      ${bars}
+    </svg>`;
+  }
+
+  function badgeColors(type) {
+    if (type === "ingreso") return { bg: "var(--mintBg)", fg: "var(--mintText)", icon: "↑" };
+    if (type === "egreso") return { bg: "var(--coralBg)", fg: "var(--coralText)", icon: "↓" };
+    if (type === "por_cobrar") return { bg: "var(--yellowSoft)", fg: "#8A6A00", icon: "◔" };
+    return { bg: "#EAF0FB", fg: "var(--navy)", icon: "◔" };
+  }
+
+  function downloadXLSX(rows, tabLabel) {
+    const typeLabelsEs = { ingreso: "Ingreso", egreso: "Egreso", por_cobrar: "Por cobrar", por_pagar: "Por pagar" };
+    const fmtDate = (d) => {
+      const [y, m, day] = d.split("-");
+      return `${day}-${m}-${y}`;
+    };
+    const header = ["Tipo", "Categoría", "Nota", "Medio de pago", "Fecha", "Valor"];
+    const data = [header, ...rows.map((m) => [
+      typeLabelsEs[m.type] || m.type, m.category, m.note || "", m.medio || "", fmtDate(m.date), m.amount,
+    ])];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws["!cols"] = [{ wch: 12 }, { wch: 16 }, { wch: 28 }, { wch: 14 }, { wch: 12 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, tabLabel || "Reporte");
+    return wb;
+  }
+  async function saveXLSX(rows, tabLabel) {
+    const wb = downloadXLSX(rows, tabLabel);
+    const arrayBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const dl = await getDownloadsCapability();
+    if (dl) return dl.save({ filename: "reporte_control.xlsx", data: arrayBuffer });
+    return browserDownload("reporte_control.xlsx", arrayBuffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  }
+
+  function cartCount() { return Object.values(cart).reduce((a, q) => a + q, 0); }
+  function cartTotal() {
+    return Object.entries(cart).reduce((sum, [id, qty]) => {
+      const p = productos.find((x) => x.id === id);
+      return sum + (p ? p.price * qty : 0);
+    }, 0);
+  }
+  function stockAvailable(p) {
+    if (p.stock === null || p.stock === undefined) return Infinity;
+    return p.stock - (cart[p.id] || 0);
+  }
+
+  function renderNav(items) {
+    return items.map((n) => `
+      <button class="cc-nav-item${n.key === page ? " active" : ""}" data-nav="${n.key}">
+        <span class="cc-nav-icon">${n.icon}</span>${n.label}
+      </button>`).join("");
+  }
+
+  function renderSidebar() {
+    const initials = (settings.businessName || "Mi negocio").trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+    return `
+      <div class="cc-sidebar-overlay${sidebarOpen ? " open" : ""}" id="cc-sb-overlay"></div>
+      <div class="cc-sidebar${sidebarOpen ? " open" : ""}" id="cc-sidebar">
+        <div class="cc-sb-logo-row"><div class="cc-logo">C</div><div class="cc-brand">Control</div><button class="cc-x" id="cc-sb-close" style="margin-left:auto;">✕</button></div>
+        <button class="cc-sb-profile-btn" id="cc-sb-edit-profile">
+          <div class="cc-avatar">${esc(initials)}</div>
+          <div>
+            <p class="cc-sb-profile-name">${esc(settings.businessName || "Mi negocio")}</p>
+            <p class="cc-sb-profile-role">${esc(settings.ownerName || "Propietario")}</p>
+          </div>
+          <span class="cc-sb-profile-edit-icon">✎</span>
+        </button>
+        <div class="cc-sb-section">Gestiona tu negocio</div>
+        ${renderNav(NAV_ITEMS)}
+        <div class="cc-sb-section">Gestiona tus contactos</div>
+        ${renderNav(NAV_ITEMS2)}
+        <button class="cc-nav-item logout" data-nav="logout"><span class="cc-nav-icon">⏻</span>Cerrar sesión</button>
+        <div class="cc-sb-version">Control · v1.0</div>
+      </div>`;
+  }
+
+  function renderVenderContent() {
+    const q = productSearch.trim().toLowerCase();
+    const filtered = productos.filter((p) => !q || p.name.toLowerCase().includes(q));
+    const gridHTML = filtered.length === 0
+      ? (productos.length === 0
+          ? `<div class="cc-empty">Aún no tienes productos. Toca "+ Nuevo producto" para agregar el primero.</div>`
+          : `<div class="cc-empty">No encontramos productos con ese nombre.</div>`)
+      : `<div class="cc-product-grid">${filtered.map((p) => {
+          const inCart = cart[p.id] || 0;
+          const avail = stockAvailable(p);
+          const lowStock = p.stock !== null && p.stock !== undefined && p.stock <= 3;
+          return `
+            <button class="cc-product-card" data-addproduct="${p.id}" ${avail <= 0 ? "disabled style=\"opacity:.5\"" : ""}>
+              ${inCart > 0 ? `<div class="cc-product-qty-badge">${inCart}</div>` : ""}
+              <p class="cc-product-name">${esc(p.name)}</p>
+              <p class="cc-product-price">${money(p.price)}</p>
+              ${p.stock !== null && p.stock !== undefined ? `<p class="cc-product-stock${lowStock ? " low" : ""}">${p.stock} en stock</p>` : ""}
+            </button>`;
+        }).join("")}</div>`;
+
+    const cartBarHTML = cartCount() > 0
+      ? `<div class="cc-cart-bar" id="cc-cart-bar">
+          <div class="cc-cart-info">${cartCount()} ${cartCount() === 1 ? "producto" : "productos"}<br/><b>${money(cartTotal())}</b></div>
+          <button class="cc-cart-btn" id="cc-cobrar-btn">Cobrar</button>
+        </div>`
+      : "";
+
+    return `
+      <div class="cc-search-wrap">
+        <span class="cc-search-icon">🔍</span>
+        <input class="cc-search" id="cc-product-search" placeholder="Buscar producto..." value="${esc(productSearch)}" />
+      </div>
+      ${gridHTML}
+      ${cartBarHTML}
+    `;
+  }
+
+  function renderEstadisticasContent(now) {
+    const [s, e] = rangeFor(statsPeriod, now);
+    const inRange = (dateStr) => { const t = toDate(dateStr).getTime(); return t >= s.getTime() && t < e.getTime(); };
+
+    const ventasEnPeriodo = ventasDetalle.filter((v) => inRange(v.date));
+    const byProduct = {};
+    ventasEnPeriodo.forEach((v) => {
+      if (!byProduct[v.productId]) byProduct[v.productId] = { name: v.name, qty: 0, revenue: 0 };
+      byProduct[v.productId].qty += v.qty;
+      byProduct[v.productId].revenue += v.subtotal;
+    });
+    const topProductos = Object.values(byProduct).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+    const maxProdRev = Math.max(1, ...topProductos.map((p) => p.revenue));
+
+    const egresosEnPeriodo = movimientos.filter((m) => m.type === "egreso" && inRange(m.date));
+    const byCat = {};
+    egresosEnPeriodo.forEach((m) => { byCat[m.category] = (byCat[m.category] || 0) + m.amount; });
+    const topGastos = Object.entries(byCat).map(([category, total]) => ({ category, total })).sort((a, b) => b.total - a.total).slice(0, 5);
+    const maxGasto = Math.max(1, ...topGastos.map((g) => g.total));
+
+    const periodOptionsHTML = PERIODS.map((p) => `<option value="${p.key}" ${p.key === statsPeriod ? "selected" : ""}>${p.label}</option>`).join("");
+
+    const topProductosHTML = topProductos.length === 0
+      ? `<div class="cc-empty">Aún no tienes ventas con productos en este período.<br/><button class="cc-btn-navy" id="cc-goto-vender" style="margin-top:12px;flex:none;padding:9px 18px;">Ir a Vender</button></div>`
+      : topProductos.map((p, i) => `
+        <div class="cc-stat-row">
+          <div class="cc-stat-row-rank">${i + 1}</div>
+          <div class="cc-stat-row-main">
+            <div class="cc-stat-row-top"><span>${esc(p.name)}</span><span>${money(p.revenue)}</span></div>
+            <div class="cc-stat-bar-track"><div class="cc-stat-bar-fill" style="width:${Math.round((p.revenue / maxProdRev) * 100)}%;background:var(--mintText)"></div></div>
+            <p class="cc-stat-row-sub">${p.qty} ${p.qty === 1 ? "unidad vendida" : "unidades vendidas"}</p>
+          </div>
+        </div>`).join("");
+
+    const topGastosHTML = topGastos.length === 0
+      ? `<div class="cc-empty">No hay egresos registrados en este período.</div>`
+      : topGastos.map((g, i) => `
+        <div class="cc-stat-row">
+          <div class="cc-stat-row-rank" style="background:var(--coralBg);color:var(--coralText)">${i + 1}</div>
+          <div class="cc-stat-row-main">
+            <div class="cc-stat-row-top"><span>${esc(g.category)}</span><span>${money(g.total)}</span></div>
+            <div class="cc-stat-bar-track"><div class="cc-stat-bar-fill" style="width:${Math.round((g.total / maxGasto) * 100)}%;background:var(--coralText)"></div></div>
+          </div>
+        </div>`).join("");
+
+    return `
+      <div class="cc-filter-row">
+        <div class="cc-select-wrap">
+          <select class="cc-select" id="cc-stats-period">${periodOptionsHTML}</select>
+          <span class="cc-select-chevron">▾</span>
+        </div>
+        <div class="cc-range-pill">📅 ${rangeLabel(statsPeriod, now)}</div>
+      </div>
+
+      <div class="cc-card">
+        <p class="cc-card-label">🏆 Top productos</p>
+        ${topProductosHTML}
+      </div>
+
+      <div class="cc-card">
+        <p class="cc-card-label">💸 Tus gastos por categoría</p>
+        ${topGastosHTML}
+      </div>
+
+      <div class="cc-stats" style="margin-bottom:24px;">
+        <button class="cc-comingsoon-card" data-comingsoon="clientes">
+          <div class="cc-stat-icon navy">👤</div>
+          <p class="cc-stat-label">Top clientes</p>
+          <p class="cc-stat-amount" style="font-size:11px;color:var(--navySoft);font-weight:700;">Próximamente</p>
+        </button>
+        <button class="cc-comingsoon-card" data-comingsoon="empleados">
+          <div class="cc-stat-icon navy">👥</div>
+          <p class="cc-stat-label">Top empleados</p>
+          <p class="cc-stat-amount" style="font-size:11px;color:var(--navySoft);font-weight:700;">Próximamente</p>
+        </button>
+      </div>
+    `;
+  }
+
+  function renderInventarioContent() {
+    const q = invSearch.trim().toLowerCase();
+    const filtered = productos.filter((p) => !q || p.name.toLowerCase().includes(q));
+    const totalProductos = productos.length;
+    const valorInventario = productos.reduce((sum, p) => sum + (p.stock != null ? p.price * p.stock : 0), 0);
+    const bajoStock = productos.filter((p) => p.stock != null && p.stock <= 3).length;
+
+    let rowsHTML;
+    if (filtered.length === 0) {
+      rowsHTML = productos.length === 0
+        ? `<div class="cc-empty">Aún no tienes productos. Toca "+ Nuevo producto" para agregar el primero.</div>`
+        : `<div class="cc-empty">No encontramos productos con ese nombre.</div>`;
+    } else {
+      rowsHTML = `<ul class="cc-list">${filtered.map((p) => {
+        const low = p.stock != null && p.stock <= 3;
+        const confirming = confirmDeleteProductId === p.id;
+        return `
+        <li class="cc-row" style="align-items:flex-start;">
+          <div class="cc-row-left" style="flex:1;min-width:0;">
+            <div class="cc-badge" style="background:var(--mintBg);color:var(--mintText)">📦</div>
+            <div style="min-width:0;flex:1;">
+              <p class="cc-row-cat">${esc(p.name)}</p>
+              <p class="cc-row-meta">${money(p.price)}${p.stock != null ? " · " + p.stock + " en stock" : " · sin control de stock"}</p>
+              ${p.stock != null ? `
+                <div class="cc-stock-adjust">
+                  <button class="cc-qty-btn" data-stockdec="${p.id}">−</button>
+                  <span class="cc-qty-val">${p.stock}</span>
+                  <button class="cc-qty-btn" data-stockinc="${p.id}">+</button>
+                  ${low ? `<span class="cc-lowstock-badge">Stock bajo</span>` : ""}
+                </div>` : ""}
+            </div>
+          </div>
+          <div class="cc-row-right" style="flex-direction:column;align-items:flex-end;gap:6px;">
+            <button class="cc-del" data-editproduct="${p.id}" title="Editar">✎</button>
+            ${confirming
+              ? `<span style="font-size:10px;">
+                  <button data-delproduct-yes="${p.id}" style="color:var(--coralText);text-decoration:underline;background:none;border:none;font-weight:700;font-size:10px;cursor:pointer;">Sí</button> /
+                  <button data-delproduct-no="1" style="color:var(--navySoft);text-decoration:underline;background:none;border:none;font-size:10px;cursor:pointer;">No</button>
+                 </span>`
+              : `<button class="cc-del" data-delproduct="${p.id}" title="Eliminar">✕</button>`}
+          </div>
+        </li>`;
+      }).join("")}</ul>`;
+    }
+
+    return `
+      <div class="cc-stats">
+        <div class="cc-stat">
+          <div class="cc-stat-icon navy">📦</div>
+          <p class="cc-stat-label">Productos</p>
+          <p class="cc-stat-amount">${totalProductos}</p>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-icon mint">💰</div>
+          <p class="cc-stat-label">Valor inventario</p>
+          <p class="cc-stat-amount" style="color:var(--mintText)">${money(valorInventario)}</p>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-icon coral">⚠</div>
+          <p class="cc-stat-label">Stock bajo</p>
+          <p class="cc-stat-amount" style="color:var(--coralText)">${bajoStock}</p>
+        </div>
+      </div>
+
+      <div class="cc-search-wrap">
+        <span class="cc-search-icon">🔍</span>
+        <input class="cc-search" id="cc-inv-search" placeholder="Buscar producto..." value="${esc(invSearch)}" />
+      </div>
+
+      ${rowsHTML}
+    `;
+  }
+
+  function renderClientesContent() {
+    const q = clienteSearch.trim().toLowerCase();
+    const filtered = clientes.filter((c) => !q || c.name.toLowerCase().includes(q));
+    const totalClientes = clientes.length;
+    const totalPorCobrar = clientes.reduce((sum, c) => sum + Math.max(0, clienteBalance(c.id)), 0);
+
+    let rowsHTML;
+    if (filtered.length === 0) {
+      rowsHTML = clientes.length === 0
+        ? `<div class="cc-empty">Aún no tienes clientes. Toca "+ Nuevo cliente" para agregar el primero.</div>`
+        : `<div class="cc-empty">No encontramos clientes con ese nombre.</div>`;
+    } else {
+      rowsHTML = `<ul class="cc-list">${filtered.map((c) => {
+        const bal = clienteBalance(c.id);
+        const initials = c.name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+        return `
+        <li class="cc-row" data-openclient="${c.id}" style="cursor:pointer;">
+          <div class="cc-row-left">
+            <div class="cc-avatar" style="width:32px;height:32px;font-size:11px;">${esc(initials)}</div>
+            <div style="min-width:0">
+              <p class="cc-row-cat">${esc(c.name)}</p>
+              <p class="cc-row-meta">${c.phone ? esc(c.phone) : "Sin teléfono"}</p>
+            </div>
+          </div>
+          <div class="cc-row-right">
+            <span class="cc-amount" style="color:${bal > 0 ? "var(--coralText)" : "var(--mintText)"}">${bal > 0 ? money(bal) : "Al día"}</span>
+          </div>
+        </li>`;
+      }).join("")}</ul>`;
+    }
+
+    return `
+      <div class="cc-stats">
+        <div class="cc-stat">
+          <div class="cc-stat-icon navy">👤</div>
+          <p class="cc-stat-label">Clientes</p>
+          <p class="cc-stat-amount">${totalClientes}</p>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-icon coral">◔</div>
+          <p class="cc-stat-label">Total por cobrar</p>
+          <p class="cc-stat-amount" style="color:var(--coralText)">${money(totalPorCobrar)}</p>
+        </div>
+      </div>
+
+      <div class="cc-search-wrap">
+        <span class="cc-search-icon">🔍</span>
+        <input class="cc-search" id="cc-cli-search" placeholder="Buscar cliente..." value="${esc(clienteSearch)}" />
+      </div>
+
+      ${rowsHTML}
+    `;
+  }
+
+  function renderClientFormSheet() {
+    return `
+      <div class="cc-overlay${showClientForm ? " open" : ""}" id="cc-client-overlay"></div>
+      <div class="cc-sheet${showClientForm ? " open" : ""}">
+        <div class="cc-sheet-head">
+          <h3 class="cc-sheet-title">${editingClienteId ? "Editar cliente" : "Nuevo cliente"}</h3>
+          <button class="cc-x" id="cc-client-close">✕</button>
+        </div>
+        <label class="cc-label">Nombre</label>
+        <input class="cc-input" type="text" id="cc-c-name" placeholder="Nombre del cliente" value="${esc(cFormName)}" />
+        <label class="cc-label">Teléfono (opcional)</label>
+        <input class="cc-input" type="tel" id="cc-c-phone" placeholder="Ej. 300 123 4567" value="${esc(cFormPhone)}" />
+        ${clienteFormError && showClientForm ? `<p class="cc-error">${esc(clienteFormError)}</p>` : ""}
+        <button class="cc-submit" id="cc-save-client">${editingClienteId ? "Guardar cambios" : "Guardar cliente"}</button>
+      </div>`;
+  }
+
+  function renderClienteDetailSheet() {
+    const c = detailClienteId ? clientes.find((x) => x.id === detailClienteId) : null;
+    if (!c) {
+      return `<div class="cc-overlay" id="cc-detail-overlay"></div><div class="cc-sheet"></div>`;
+    }
+    const bal = clienteBalance(c.id);
+    const historial = clienteMovimientos
+      .filter((m) => m.clienteId === c.id)
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 20);
+
+    const historialHTML = historial.length === 0
+      ? `<p style="color:var(--navySoft);font-size:12.5px;">Aún no hay movimientos con este cliente.</p>`
+      : `<ul class="cc-list">${historial.map((m) => `
+        <li class="cc-row">
+          <div class="cc-row-left">
+            <div class="cc-badge" style="background:${m.tipo === "fiado" ? "var(--coralBg)" : "var(--mintBg)"};color:${m.tipo === "fiado" ? "var(--coralText)" : "var(--mintText)"}">${m.tipo === "fiado" ? "◔" : "↓"}</div>
+            <div style="min-width:0">
+              <p class="cc-row-cat">${m.tipo === "fiado" ? "Fiado" : "Abono"}</p>
+              <p class="cc-row-meta">${toDate(m.date).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}${m.nota ? " · " + esc(m.nota) : ""}</p>
+            </div>
+          </div>
+          <div class="cc-row-right">
+            <span class="cc-amount" style="color:${m.tipo === "fiado" ? "var(--coralText)" : "var(--mintText)"}">${m.tipo === "fiado" ? "+" : "-"}${money(m.monto)}</span>
+          </div>
+        </li>`).join("")}</ul>`;
+
+    const fiadoFormHTML = activeClienteAction === "fiado" ? `
+      <div class="cc-card" style="margin-bottom:14px;">
+        <label class="cc-label">Monto del fiado</label>
+        <input class="cc-input amount" type="number" inputmode="decimal" id="cc-fiado-amount" placeholder="0" value="${esc(fiadoAmount)}" />
+        <label class="cc-label">Nota (opcional)</label>
+        <input class="cc-input" type="text" id="cc-fiado-note" placeholder="Ej. Mercado de la semana" value="${esc(fiadoNote)}" style="margin-bottom:8px;" />
+        ${clienteFormError ? `<p class="cc-error">${esc(clienteFormError)}</p>` : ""}
+        <button class="cc-submit" id="cc-save-fiado" style="margin-top:0;">Guardar fiado</button>
+      </div>` : "";
+
+    const abonoFormHTML = activeClienteAction === "abono" ? `
+      <div class="cc-card" style="margin-bottom:14px;">
+        <label class="cc-label">Monto del abono</label>
+        <input class="cc-input amount" type="number" inputmode="decimal" id="cc-abono-amount" placeholder="0" value="${esc(abonoAmount)}" />
+        <label class="cc-label">Nota (opcional)</label>
+        <input class="cc-input" type="text" id="cc-abono-note" placeholder="Ej. Pago parcial" value="${esc(abonoNote)}" style="margin-bottom:8px;" />
+        ${clienteFormError ? `<p class="cc-error">${esc(clienteFormError)}</p>` : ""}
+        <button class="cc-submit" id="cc-save-abono" style="margin-top:0;">Guardar abono</button>
+      </div>` : "";
+
+    const deleteAreaHTML = confirmDeleteClienteId === c.id
+      ? `<span style="font-size:11px;">
+          ¿Eliminar cliente? <button id="cc-delclient-yes" style="color:var(--coralText);text-decoration:underline;background:none;border:none;font-weight:700;font-size:11px;cursor:pointer;">Sí</button> /
+          <button id="cc-delclient-no" style="color:var(--navySoft);text-decoration:underline;background:none;border:none;font-size:11px;cursor:pointer;">Cancelar</button>
+        </span>`
+      : `<button class="cc-clear-link" id="cc-delclient-start" style="color:var(--coralText);">Eliminar cliente</button>`;
+
+    return `
+      <div class="cc-overlay${showClienteDetail ? " open" : ""}" id="cc-detail-overlay"></div>
+      <div class="cc-sheet${showClienteDetail ? " open" : ""}">
+        <div class="cc-sheet-head">
+          <div>
+            <h3 class="cc-sheet-title">${esc(c.name)}</h3>
+            <p style="font-size:11px;color:var(--navySoft);margin:2px 0 0;">${c.phone ? esc(c.phone) : "Sin teléfono"}</p>
+          </div>
+          <button class="cc-x" id="cc-detail-close">✕</button>
+        </div>
+        <div style="text-align:center;background:${bal > 0 ? "var(--coralBg)" : "var(--mintBg)"};border-radius:12px;padding:16px;margin-bottom:14px;">
+          <p style="font-size:11px;color:${bal > 0 ? "var(--coralText)" : "var(--mintText)"};font-weight:700;margin:0 0 4px;">${bal > 0 ? "Te debe" : "Al día"}</p>
+          <p style="font-size:26px;font-weight:800;color:${bal > 0 ? "var(--coralText)" : "var(--mintText)"};margin:0;">${money(bal)}</p>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="cc-btn-outline" data-clientaction="fiado">+ Fiado</button>
+          <button class="cc-btn-navy" data-clientaction="abono" ${bal <= 0 ? 'disabled style="opacity:.5"' : ""}>Registrar abono</button>
+        </div>
+        ${fiadoFormHTML}
+        ${abonoFormHTML}
+        <p class="cc-label" style="margin-top:6px;">Historial</p>
+        ${historialHTML}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+          <button class="cc-clear-link" id="cc-edit-client">Editar cliente</button>
+          ${deleteAreaHTML}
+        </div>
+      </div>`;
+  }
+
+  function renderProveedoresContent() {
+    const q = proveedorSearch.trim().toLowerCase();
+    const filtered = proveedores.filter((p) => !q || p.name.toLowerCase().includes(q));
+    const totalProveedores = proveedores.length;
+    const totalPorPagar = proveedores.reduce((sum, p) => sum + Math.max(0, proveedorBalance(p.id)), 0);
+
+    let rowsHTML;
+    if (filtered.length === 0) {
+      rowsHTML = proveedores.length === 0
+        ? `<div class="cc-empty">Aún no tienes proveedores. Toca "+ Nuevo proveedor" para agregar el primero.</div>`
+        : `<div class="cc-empty">No encontramos proveedores con ese nombre.</div>`;
+    } else {
+      rowsHTML = `<ul class="cc-list">${filtered.map((p) => {
+        const bal = proveedorBalance(p.id);
+        const initials = p.name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+        return `
+        <li class="cc-row" data-openproveedor="${p.id}" style="cursor:pointer;">
+          <div class="cc-row-left">
+            <div class="cc-avatar" style="width:32px;height:32px;font-size:11px;background:#EAF0FB;color:var(--navy);">${esc(initials)}</div>
+            <div style="min-width:0">
+              <p class="cc-row-cat">${esc(p.name)}</p>
+              <p class="cc-row-meta">${p.phone ? esc(p.phone) : "Sin teléfono"}</p>
+            </div>
+          </div>
+          <div class="cc-row-right">
+            <span class="cc-amount" style="color:${bal > 0 ? "var(--coralText)" : "var(--mintText)"}">${bal > 0 ? money(bal) : "Al día"}</span>
+          </div>
+        </li>`;
+      }).join("")}</ul>`;
+    }
+
+    return `
+      <div class="cc-stats">
+        <div class="cc-stat">
+          <div class="cc-stat-icon navy">🚚</div>
+          <p class="cc-stat-label">Proveedores</p>
+          <p class="cc-stat-amount">${totalProveedores}</p>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-icon coral">◔</div>
+          <p class="cc-stat-label">Total por pagar</p>
+          <p class="cc-stat-amount" style="color:var(--coralText)">${money(totalPorPagar)}</p>
+        </div>
+      </div>
+
+      <div class="cc-search-wrap">
+        <span class="cc-search-icon">🔍</span>
+        <input class="cc-search" id="cc-pv-search" placeholder="Buscar proveedor..." value="${esc(proveedorSearch)}" />
+      </div>
+
+      ${rowsHTML}
+    `;
+  }
+
+  function renderProveedorFormSheet() {
+    return `
+      <div class="cc-overlay${showProveedorForm ? " open" : ""}" id="cc-proveedor-overlay"></div>
+      <div class="cc-sheet${showProveedorForm ? " open" : ""}">
+        <div class="cc-sheet-head">
+          <h3 class="cc-sheet-title">${editingProveedorId ? "Editar proveedor" : "Nuevo proveedor"}</h3>
+          <button class="cc-x" id="cc-proveedor-close">✕</button>
+        </div>
+        <label class="cc-label">Nombre</label>
+        <input class="cc-input" type="text" id="cc-pv-name" placeholder="Nombre del proveedor" value="${esc(pvFormName)}" />
+        <label class="cc-label">Teléfono (opcional)</label>
+        <input class="cc-input" type="tel" id="cc-pv-phone" placeholder="Ej. 300 123 4567" value="${esc(pvFormPhone)}" />
+        ${proveedorFormError && showProveedorForm ? `<p class="cc-error">${esc(proveedorFormError)}</p>` : ""}
+        <button class="cc-submit" id="cc-save-proveedor">${editingProveedorId ? "Guardar cambios" : "Guardar proveedor"}</button>
+      </div>`;
+  }
+
+  function renderProveedorDetailSheet() {
+    const p = detailProveedorId ? proveedores.find((x) => x.id === detailProveedorId) : null;
+    if (!p) {
+      return `<div class="cc-overlay" id="cc-pvdetail-overlay"></div><div class="cc-sheet"></div>`;
+    }
+    const bal = proveedorBalance(p.id);
+    const historial = proveedorMovimientos
+      .filter((m) => m.proveedorId === p.id)
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 20);
+
+    const historialHTML = historial.length === 0
+      ? `<p style="color:var(--navySoft);font-size:12.5px;">Aún no hay movimientos con este proveedor.</p>`
+      : `<ul class="cc-list">${historial.map((m) => `
+        <li class="cc-row">
+          <div class="cc-row-left">
+            <div class="cc-badge" style="background:${m.tipo === "compra" ? "var(--coralBg)" : "var(--mintBg)"};color:${m.tipo === "compra" ? "var(--coralText)" : "var(--mintText)"}">${m.tipo === "compra" ? "◔" : "↓"}</div>
+            <div style="min-width:0">
+              <p class="cc-row-cat">${m.tipo === "compra" ? "Compra" : "Pago"}</p>
+              <p class="cc-row-meta">${toDate(m.date).toLocaleDateString("es-CO", { day: "numeric", month: "short" })}${m.nota ? " · " + esc(m.nota) : ""}</p>
+            </div>
+          </div>
+          <div class="cc-row-right">
+            <span class="cc-amount" style="color:${m.tipo === "compra" ? "var(--coralText)" : "var(--mintText)"}">${m.tipo === "compra" ? "+" : "-"}${money(m.monto)}</span>
+          </div>
+        </li>`).join("")}</ul>`;
+
+    const compraFormHTML = activeProveedorAction === "compra" ? `
+      <div class="cc-card" style="margin-bottom:14px;">
+        <label class="cc-label">Monto de la compra</label>
+        <input class="cc-input amount" type="number" inputmode="decimal" id="cc-compra-amount" placeholder="0" value="${esc(compraAmount)}" />
+        <label class="cc-label">Nota (opcional)</label>
+        <input class="cc-input" type="text" id="cc-compra-note" placeholder="Ej. Mercancía del mes" value="${esc(compraNote)}" style="margin-bottom:8px;" />
+        ${proveedorFormError ? `<p class="cc-error">${esc(proveedorFormError)}</p>` : ""}
+        <button class="cc-submit" id="cc-save-compra" style="margin-top:0;">Guardar compra</button>
+      </div>` : "";
+
+    const pagoFormHTML = activeProveedorAction === "pago" ? `
+      <div class="cc-card" style="margin-bottom:14px;">
+        <label class="cc-label">Monto del pago</label>
+        <input class="cc-input amount" type="number" inputmode="decimal" id="cc-pago-amount" placeholder="0" value="${esc(pagoAmount)}" />
+        <label class="cc-label">Nota (opcional)</label>
+        <input class="cc-input" type="text" id="cc-pago-note" placeholder="Ej. Abono a la deuda" value="${esc(pagoNote)}" style="margin-bottom:8px;" />
+        ${proveedorFormError ? `<p class="cc-error">${esc(proveedorFormError)}</p>` : ""}
+        <button class="cc-submit" id="cc-save-pago" style="margin-top:0;">Guardar pago</button>
+      </div>` : "";
+
+    const deleteAreaHTML = confirmDeleteProveedorId === p.id
+      ? `<span style="font-size:11px;">
+          ¿Eliminar proveedor? <button id="cc-delproveedor-yes" style="color:var(--coralText);text-decoration:underline;background:none;border:none;font-weight:700;font-size:11px;cursor:pointer;">Sí</button> /
+          <button id="cc-delproveedor-no" style="color:var(--navySoft);text-decoration:underline;background:none;border:none;font-size:11px;cursor:pointer;">Cancelar</button>
+        </span>`
+      : `<button class="cc-clear-link" id="cc-delproveedor-start" style="color:var(--coralText);">Eliminar proveedor</button>`;
+
+    return `
+      <div class="cc-overlay${showProveedorDetail ? " open" : ""}" id="cc-pvdetail-overlay"></div>
+      <div class="cc-sheet${showProveedorDetail ? " open" : ""}">
+        <div class="cc-sheet-head">
+          <div>
+            <h3 class="cc-sheet-title">${esc(p.name)}</h3>
+            <p style="font-size:11px;color:var(--navySoft);margin:2px 0 0;">${p.phone ? esc(p.phone) : "Sin teléfono"}</p>
+          </div>
+          <button class="cc-x" id="cc-pvdetail-close">✕</button>
+        </div>
+        <div style="text-align:center;background:${bal > 0 ? "var(--coralBg)" : "var(--mintBg)"};border-radius:12px;padding:16px;margin-bottom:14px;">
+          <p style="font-size:11px;color:${bal > 0 ? "var(--coralText)" : "var(--mintText)"};font-weight:700;margin:0 0 4px;">${bal > 0 ? "Le debes" : "Al día"}</p>
+          <p style="font-size:26px;font-weight:800;color:${bal > 0 ? "var(--coralText)" : "var(--mintText)"};margin:0;">${money(bal)}</p>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;">
+          <button class="cc-btn-outline" data-proveedoraction="compra">+ Compra</button>
+          <button class="cc-btn-navy" data-proveedoraction="pago" ${bal <= 0 ? 'disabled style="opacity:.5"' : ""}>Registrar pago</button>
+        </div>
+        ${compraFormHTML}
+        ${pagoFormHTML}
+        <p class="cc-label" style="margin-top:6px;">Historial</p>
+        ${historialHTML}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+          <button class="cc-clear-link" id="cc-edit-proveedor">Editar proveedor</button>
+          ${deleteAreaHTML}
+        </div>
+      </div>`;
+  }
+
+  function renderConfiguracionesContent() {
+    const pinSet = !!settings.pin;
+    const securityCardHTML = `
+      <div class="cc-card">
+        <p class="cc-card-label">Seguridad</p>
+        ${pinSet
+          ? `<p style="font-size:12.5px;color:var(--mintText);font-weight:700;margin:0 0 14px;">🔒 Bloqueo con PIN activado</p>`
+          : `<p style="font-size:12.5px;color:var(--navySoft);margin:0 0 14px;">Activa un PIN para poder bloquear la app desde "Cerrar sesión" en el menú.</p>`}
+        ${pinSet ? `
+          <label class="cc-label">PIN actual</label>
+          <input class="cc-input" type="password" inputmode="numeric" maxlength="4" id="cc-sec-current" placeholder="••••" value="${esc(secCurrentPin)}" style="max-width:120px;" />` : ""}
+        <label class="cc-label">${pinSet ? "Nuevo PIN" : "Crea un PIN (4 dígitos)"}</label>
+        <input class="cc-input" type="password" inputmode="numeric" maxlength="4" id="cc-sec-new" placeholder="••••" value="${esc(secNewPin)}" style="max-width:120px;" />
+        <label class="cc-label">Confirmar PIN</label>
+        <input class="cc-input" type="password" inputmode="numeric" maxlength="4" id="cc-sec-confirm" placeholder="••••" value="${esc(secConfirmPin)}" style="max-width:120px;margin-bottom:8px;" />
+        ${secError ? `<p class="cc-error">${esc(secError)}</p>` : ""}
+        <button class="cc-submit" id="cc-save-pin" style="margin-top:0;">${pinSet ? "Cambiar PIN" : "Activar bloqueo"}</button>
+        ${pinSet ? (
+          !showRemovePinConfirm
+            ? `<button class="cc-clear-link" id="cc-remove-pin-start" style="color:var(--coralText);margin-top:14px;">Desactivar bloqueo</button>`
+            : `<div style="margin-top:14px;">
+                <label class="cc-label">Confirma tu PIN actual para desactivar</label>
+                <input class="cc-input" type="password" inputmode="numeric" maxlength="4" id="cc-remove-pin-input" placeholder="••••" style="max-width:120px;margin-bottom:8px;" />
+                <div class="cc-confirm">
+                  <button style="color:var(--coralText)" id="cc-remove-pin-yes">Confirmar</button>
+                  <button style="color:var(--navySoft)" id="cc-remove-pin-no">Cancelar</button>
+                </div>
+              </div>`
+        ) : ""}
+      </div>
+    `;
+
+    return `
+      <div class="cc-card">
+        <p class="cc-card-label">Perfil del negocio</p>
+        <label class="cc-label">Nombre del negocio</label>
+        <input class="cc-input" type="text" id="cc-cfg-business" value="${esc(cfgBusinessName)}" placeholder="Mi negocio" />
+        <label class="cc-label">Nombre del propietario</label>
+        <input class="cc-input" type="text" id="cc-cfg-owner" value="${esc(cfgOwnerName)}" placeholder="Propietario" />
+        <label class="cc-label">Símbolo de moneda</label>
+        <input class="cc-input" type="text" id="cc-cfg-currency" value="${esc(cfgCurrency)}" placeholder="$" style="margin-bottom:8px;max-width:100px;" />
+        <button class="cc-submit" id="cc-save-settings" style="margin-top:6px;">Guardar cambios</button>
+      </div>
+
+      ${securityCardHTML}
+
+      <div class="cc-card">
+        <p class="cc-card-label">Tus datos</p>
+        <button class="cc-btn-outline" id="cc-export-backup" style="width:100%;margin-bottom:10px;">⬇ Descargar respaldo completo</button>
+        <p style="font-size:11px;color:var(--navySoft);margin:0 0 16px;">Incluye movimientos, productos, clientes, proveedores y ajustes en un solo archivo.</p>
+        ${!confirmResetAll
+          ? `<button class="cc-clear-link" id="cc-reset-all-start" style="color:var(--coralText);">Borrar todos los datos de la app</button>`
+          : `<div class="cc-confirm">
+              <span>Esto borrará TODO permanentemente (ventas, productos, clientes, proveedores). ¿Seguro?</span>
+              <button style="color:var(--coralText)" id="cc-reset-all-yes">Sí, borrar todo</button>
+              <button style="color:var(--navySoft)" id="cc-reset-all-no">Cancelar</button>
+            </div>`}
+      </div>
+
+      <div class="cc-card">
+        <p class="cc-card-label">Acerca de</p>
+        <p style="font-size:12.5px;color:var(--navySoft);margin:0;">Control · v1.0<br/>Hecha a tu medida, sin cuentas ni servidores externos. Tus datos se guardan solo para ti.</p>
+      </div>
+    `;
+  }
+
+  function renderAyudaContent() {
+    const itemsHTML = HELP_ITEMS.map((item) => {
+      const open = expandedHelpId === item.id;
+      return `
+        <div class="cc-faq-item">
+          <button class="cc-faq-q" data-faq="${item.id}">
+            <span>${esc(item.q)}</span>
+            <span class="cc-faq-chevron${open ? " open" : ""}">▾</span>
+          </button>
+          ${open ? `<div class="cc-faq-a">${esc(item.a)}</div>` : ""}
+        </div>`;
+    }).join("");
+
+    return `
+      <p style="font-size:12.5px;color:var(--navySoft);margin:0 0 14px;">Todo lo que necesitas saber para sacarle provecho a Control.</p>
+      ${itemsHTML}
+    `;
+  }
+
+  function formatDateDisplay(dateStr) {
+    return toDate(dateStr).toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  }
+  function getSelectedValueForTarget(target) {
+    if (target === "movdate") return fDate;
+    if (target === "weekdate") return selectedWeekDate;
+    if (target === "daydate") return selectedDay;
+    return todayStr();
+  }
+  function setSelectedValueForTarget(target, dateStr) {
+    if (target === "movdate") fDate = dateStr;
+    else if (target === "weekdate") selectedWeekDate = dateStr;
+    else if (target === "daydate") selectedDay = dateStr;
+  }
+  function openDatePicker(target) {
+    datePickerTarget = target;
+    const current = toDate(getSelectedValueForTarget(target));
+    datePickerViewYear = current.getFullYear();
+    datePickerViewMonth = current.getMonth();
+    datePickerOpen = true;
+  }
+
+  function renderDatePickerSheet() {
+    if (!datePickerOpen) return `<div class="cc-overlay" id="cc-datepicker-overlay"></div><div class="cc-sheet"></div>`;
+    const year = datePickerViewYear;
+    const month = datePickerViewMonth;
+    const firstOfMonth = new Date(year, month, 1);
+    const startWeekday = (firstOfMonth.getDay() + 6) % 7; // 0=Mon..6=Sun
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const todayIso = todayStr();
+    const currentValue = getSelectedValueForTarget(datePickerTarget);
+
+    let cells = "";
+    for (let i = 0; i < startWeekday; i++) cells += `<div class="cc-dp-cell empty"></div>`;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const isToday = dateStr === todayIso;
+      const isSelected = dateStr === currentValue;
+      cells += `<button class="cc-dp-cell${isToday ? " today" : ""}${isSelected ? " selected" : ""}" data-dppick="${dateStr}">${d}</button>`;
+    }
+
+    return `
+      <div class="cc-overlay open" id="cc-datepicker-overlay"></div>
+      <div class="cc-sheet open" style="max-width:360px;">
+        <div class="cc-sheet-head">
+          <h3 class="cc-sheet-title">Elige una fecha</h3>
+          <button class="cc-x" id="cc-datepicker-close">✕</button>
+        </div>
+        <div class="cc-dp-nav">
+          <button class="cc-dp-navbtn" id="cc-dp-prev">‹</button>
+          <span class="cc-dp-navlabel">${MONTH_NAMES[month]} ${year}</span>
+          <button class="cc-dp-navbtn" id="cc-dp-next">›</button>
+        </div>
+        <div class="cc-dp-grid">
+          <div class="cc-dp-dow">Lun</div><div class="cc-dp-dow">Mar</div><div class="cc-dp-dow">Mié</div><div class="cc-dp-dow">Jue</div><div class="cc-dp-dow">Vie</div><div class="cc-dp-dow">Sáb</div><div class="cc-dp-dow">Dom</div>
+          ${cells}
+        </div>
+        <button class="cc-clear-link" id="cc-dp-today" style="margin-top:14px;">Ir a hoy</button>
+      </div>`;
+  }
+
+  function renderProfileEditSheet() {
+    return `
+      <div class="cc-overlay${showProfileEditSheet ? " open" : ""}" id="cc-profile-edit-overlay"></div>
+      <div class="cc-sheet${showProfileEditSheet ? " open" : ""}">
+        <div class="cc-sheet-head">
+          <h3 class="cc-sheet-title">Editar perfil</h3>
+          <button class="cc-x" id="cc-profile-edit-close">✕</button>
+        </div>
+        <label class="cc-label">Nombre del negocio</label>
+        <input class="cc-input" type="text" id="cc-pf-business" value="${esc(cfgBusinessName)}" placeholder="Mi negocio" />
+        <label class="cc-label">Nombre del propietario</label>
+        <input class="cc-input" type="text" id="cc-pf-owner" value="${esc(cfgOwnerName)}" placeholder="Propietario" style="margin-bottom:6px;" />
+        <button class="cc-submit" id="cc-save-profile-edit">Guardar cambios</button>
+      </div>`;
+  }
+
+  function renderLockScreenHTML() {
+    return `
+      <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;background:var(--bg);">
+        <div class="cc-logo" style="width:52px;height:52px;font-size:24px;margin-bottom:16px;">C</div>
+        <h2 style="font-size:18px;font-weight:800;color:var(--navy);margin:0 0 6px;">Control está bloqueado</h2>
+        <p style="font-size:12.5px;color:var(--navySoft);margin:0 0 20px;">Ingresa tu PIN para continuar</p>
+        <input class="cc-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" id="cc-lock-pin" placeholder="••••" style="text-align:center;font-size:22px;letter-spacing:10px;max-width:160px;margin-bottom:10px;" />
+        ${lockError ? `<p class="cc-error">${esc(lockError)}</p>` : ""}
+        <button class="cc-submit" id="cc-unlock-btn" style="max-width:220px;">Desbloquear</button>
+        <p style="font-size:11px;color:var(--navySoft);margin-top:20px;max-width:260px;">¿Olvidaste tu PIN? Por seguridad no se puede recuperar. Deberás borrar los datos de esta app desde la configuración de tu navegador para reiniciarla.</p>
+      </div>`;
+  }
+  function wireLockEvents() {
+    const input = document.getElementById("cc-lock-pin");
+    if (input) {
+      input.focus();
+      input.addEventListener("keydown", (e) => { if (e.key === "Enter") attemptUnlock(); });
+    }
+    const btn = document.getElementById("cc-unlock-btn");
+    if (btn) btn.addEventListener("click", attemptUnlock);
+  }
+  function attemptUnlock() {
+    const val = document.getElementById("cc-lock-pin").value;
+    if (val && val === settings.pin) {
+      sessionLocked = false; lockError = ""; lockPinInput = "";
+      render();
+    } else {
+      lockError = "PIN incorrecto.";
+      render();
+    }
+  }
+
+  function renderExportDialogSheet() {
+    const tabLabels = { ingreso: "Ingresos", egreso: "Egresos", por_cobrar: "Por cobrar", por_pagar: "Por pagar" };
+    return `
+      <div class="cc-overlay${showExportDialog ? " open" : ""}" id="cc-export-overlay"></div>
+      <div class="cc-sheet${showExportDialog ? " open" : ""}">
+        <div class="cc-sheet-head">
+          <h3 class="cc-sheet-title">Exportar reporte</h3>
+          <button class="cc-x" id="cc-export-close">✕</button>
+        </div>
+        <p style="font-size:12.5px;color:var(--navySoft);margin:0 0 16px;">Se exportarán tus movimientos de <b>${tabLabels[tab]}</b>. ¿De qué período?</p>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button class="cc-btn-outline" data-exportperiod="week" style="width:100%;">Esta semana</button>
+          <button class="cc-btn-outline" data-exportperiod="month" style="width:100%;">Este mes</button>
+          <button class="cc-btn-outline" data-exportperiod="year" style="width:100%;">Este año</button>
+        </div>
+      </div>`;
+  }
+
+  function pctChange(curr, prev) {
+    if (prev === 0) return curr === 0 ? 0 : 100;
+    return ((curr - prev) / Math.abs(prev)) * 100;
+  }
+
+  function renderHomeContent(now) {
+    const todayStart = startOfDay(now);
+    const todayEnd = new Date(todayStart.getTime() + 86400000);
+    const yestStart = new Date(todayStart.getTime() - 86400000);
+    const yestEnd = todayStart;
+
+    const inRange = (dateStr, s, e) => { const t = toDate(dateStr).getTime(); return t >= s.getTime() && t < e.getTime(); };
+
+    const ventasHoy = movimientos.filter((m) => m.type === "ingreso" && inRange(m.date, todayStart, todayEnd)).reduce((a, m) => a + m.amount, 0);
+    const ventasAyer = movimientos.filter((m) => m.type === "ingreso" && inRange(m.date, yestStart, yestEnd)).reduce((a, m) => a + m.amount, 0);
+    const gastosHoy = movimientos.filter((m) => m.type === "egreso" && inRange(m.date, todayStart, todayEnd)).reduce((a, m) => a + m.amount, 0);
+    const balanceHoy = ventasHoy - gastosHoy;
+    const cambio = pctChange(ventasHoy, ventasAyer);
+
+    // month stats
+    const monthStart = startOfMonth(now);
+    const monthEnd = new Date(monthStart); monthEnd.setMonth(monthEnd.getMonth() + 1);
+    const prevMonthStart = new Date(monthStart); prevMonthStart.setMonth(prevMonthStart.getMonth() - 1);
+    const prevMonthEnd = monthStart;
+
+    const gananciaMes = movimientos.filter((m) => inRange(m.date, monthStart, monthEnd) && (m.type === "ingreso" || m.type === "egreso"))
+      .reduce((a, m) => a + (m.type === "ingreso" ? m.amount : -m.amount), 0);
+    const gananciaMesPrev = movimientos.filter((m) => inRange(m.date, prevMonthStart, prevMonthEnd) && (m.type === "ingreso" || m.type === "egreso"))
+      .reduce((a, m) => a + (m.type === "ingreso" ? m.amount : -m.amount), 0);
+    const gananciaCambio = pctChange(gananciaMes, gananciaMesPrev);
+
+    const ventasDetalleMes = ventasDetalle.filter((v) => inRange(v.date, monthStart, monthEnd));
+    const byProd = {};
+    ventasDetalleMes.forEach((v) => {
+      if (!byProd[v.productId]) byProd[v.productId] = { name: v.name, revenue: 0 };
+      byProd[v.productId].revenue += v.subtotal;
+    });
+    const topProd = Object.values(byProd).sort((a, b) => b.revenue - a.revenue)[0];
+
+    const carouselItems = [
+      { key: "estadisticas", icon: "📈", label: "Estadísticas" },
+      { key: "inventario", icon: "📦", label: "Inventario" },
+      { key: "clientes", icon: "👤", label: "Clientes" },
+      { key: "proveedores", icon: "🚚", label: "Proveedores" },
+      { key: "vender", icon: "🏷", label: "Vender" },
+    ];
+
+    return `
+      <div class="cc-home-hero">
+        <div class="cc-home-hero-top">
+          <div class="cc-home-hero-main">
+            <p class="cc-home-hero-label">Tu negocio hoy</p>
+            <p class="cc-home-hero-amount">${money(ventasHoy)}</p>
+          </div>
+          <span class="cc-home-vs ${cambio >= 0 ? "up" : "down"}">${cambio >= 0 ? "↑" : "↓"} ${Math.abs(cambio).toFixed(1)}%</span>
+        </div>
+        <p style="font-size:11px;color:var(--navySoft);margin:0;">Ventas hoy vs. ayer</p>
+
+        <div class="cc-home-split">
+          <div class="cc-home-split-col">
+            <p class="cc-home-split-amount" style="color:${balanceHoy < 0 ? "var(--coralText)" : "var(--mintText)"}">${money(balanceHoy)}</p>
+            <p class="cc-home-split-label">Balance</p>
+          </div>
+          <div class="cc-home-split-col">
+            <p class="cc-home-split-amount" style="color:var(--coralText)">${money(gastosHoy)}</p>
+            <p class="cc-home-split-label">Gastos hoy</p>
+          </div>
+        </div>
+
+        <button class="cc-home-cta" id="cc-home-registrar-venta">+ Registrar venta</button>
+      </div>
+
+      <p class="cc-home-section-title">Descubre todo lo que puedes hacer</p>
+      <div class="cc-home-carousel">
+        ${carouselItems.map((c) => `
+          <button class="cc-home-card" data-homenav="${c.key}">
+            <div class="cc-home-card-icon">${c.icon}</div>
+            <div class="cc-home-card-label">${esc(c.label)}</div>
+          </button>`).join("")}
+      </div>
+
+      <div class="cc-card" style="margin-bottom:24px;">
+        <p class="cc-card-label">📊 Estadísticas</p>
+        <div class="cc-home-stats-row">
+          <div class="cc-home-stat-card">
+            <p class="cc-home-stat-title">Producto estrella del mes</p>
+            <p class="cc-home-stat-value">${topProd ? esc(topProd.name) : "Sin datos"}</p>
+            <p class="cc-home-stat-sub">${topProd ? money(topProd.revenue) : money(0)}</p>
+          </div>
+          <div class="cc-home-stat-card">
+            <p class="cc-home-stat-title">Ganancias del mes</p>
+            <p class="cc-home-stat-value" style="color:${gananciaMes < 0 ? "var(--coralText)" : "var(--navy)"}">${money(gananciaMes)}</p>
+            <p class="cc-home-stat-sub" style="color:${gananciaCambio >= 0 ? "var(--mintText)" : "var(--coralText)"}">${gananciaCambio >= 0 ? "↑" : "↓"} ${Math.abs(gananciaCambio).toFixed(1)}% vs. mes anterior</p>
+          </div>
+        </div>
+        <button class="cc-home-viewall" id="cc-home-viewall-stats">👁 Ver todo →</button>
+      </div>
+    `;
+  }
+
+  function renderDeudasContent() {
+    const totalPorCobrar = clientes.reduce((sum, c) => sum + Math.max(0, clienteBalance(c.id)), 0);
+    const totalPorPagar = proveedores.reduce((sum, p) => sum + Math.max(0, proveedorBalance(p.id)), 0);
+    const clientesConDeuda = clientes.filter((c) => clienteBalance(c.id) > 0).length;
+    const proveedoresConDeuda = proveedores.filter((p) => proveedorBalance(p.id) > 0).length;
+
+    return `
+      <div class="cc-stats" style="margin-bottom:20px;">
+        <div class="cc-stat">
+          <div class="cc-stat-icon coral">◔</div>
+          <p class="cc-stat-label">Por cobrar</p>
+          <p class="cc-stat-amount" style="color:var(--coralText)">${money(totalPorCobrar)}</p>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-icon navy">◔</div>
+          <p class="cc-stat-label">Por pagar</p>
+          <p class="cc-stat-amount">${money(totalPorPagar)}</p>
+        </div>
+      </div>
+
+      <div class="cc-card" style="cursor:pointer;" data-homenav="clientes">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="cc-stat-icon coral" style="width:40px;height:40px;font-size:18px;">👤</div>
+          <div style="flex:1;">
+            <p style="font-size:14px;font-weight:800;color:var(--navy);margin:0 0 2px;">Clientes</p>
+            <p style="font-size:11.5px;color:var(--navySoft);margin:0;">${clientesConDeuda} ${clientesConDeuda === 1 ? "cliente te debe" : "clientes te deben"}</p>
+          </div>
+          <span style="color:var(--navySoft);">›</span>
+        </div>
+      </div>
+
+      <div class="cc-card" style="cursor:pointer;" data-homenav="proveedores">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="cc-stat-icon navy" style="width:40px;height:40px;font-size:18px;">🚚</div>
+          <div style="flex:1;">
+            <p style="font-size:14px;font-weight:800;color:var(--navy);margin:0 0 2px;">Proveedores</p>
+            <p style="font-size:11.5px;color:var(--navySoft);margin:0;">${proveedoresConDeuda} ${proveedoresConDeuda === 1 ? "proveedor por pagar" : "proveedores por pagar"}</p>
+          </div>
+          <span style="color:var(--navySoft);">›</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function render() {
+    const root = document.getElementById("cc-root");
+    if (!loaded || !productosLoaded || !ventasDetalleLoaded || !clientesLoaded || !clienteMovLoaded || !proveedoresLoaded || !proveedorMovLoaded || !settingsLoaded) {
+      root.innerHTML = '<div class="cc-loading">Cargando tu caja…</div>';
+      return;
+    }
+    if (sessionLocked) {
+      root.innerHTML = renderLockScreenHTML();
+      wireLockEvents();
+      return;
+    }
+    const now = new Date();
+    const periodRef = period === "year" ? new Date(selectedYear, now.getMonth(), now.getDate())
+      : period === "month" ? new Date(selectedYear, selectedMonth, 1)
+      : period === "week" ? toDate(selectedWeekDate)
+      : period === "day" ? toDate(selectedDay)
+      : now;
+    const [s, e] = rangeFor(period, periodRef);
+    const enPeriodo = movimientos.filter((m) => { const t = toDate(m.date).getTime(); return t >= s.getTime() && t < e.getTime(); });
+    const ing = enPeriodo.filter((m) => m.type === "ingreso").reduce((a, m) => a + m.amount, 0);
+    const eg = enPeriodo.filter((m) => m.type === "egreso").reduce((a, m) => a + m.amount, 0);
+    const porCobrar = enPeriodo.filter((m) => m.type === "por_cobrar").reduce((a, m) => a + m.amount, 0);
+    const porPagar = enPeriodo.filter((m) => m.type === "por_pagar").reduce((a, m) => a + m.amount, 0);
+    const balance = ing - eg;
+
+    let lista = enPeriodo.filter((m) => m.type === tab);
+    if (filterCategory) lista = lista.filter((m) => m.category === filterCategory);
+    if (search.trim()) {
+      const qq = search.trim().toLowerCase();
+      lista = lista.filter((m) => (m.category + " " + (m.note || "")).toLowerCase().includes(qq));
+    }
+    lista = lista.sort((a, b) => toDate(b.date) - toDate(a.date) || b.createdAt - a.createdAt);
+
+    const periodOptions = PERIODS.map((p) => `<option value="${p.key}" ${p.key === period ? "selected" : ""}>${p.label}</option>`).join("");
+    const currentYearNow = now.getFullYear();
+    const yearOptions = Array.from({ length: 7 }, (_, i) => currentYearNow - 6 + i)
+      .map((y) => `<option value="${y}" ${y === selectedYear ? "selected" : ""}>${y}</option>`).join("");
+    const monthOptions = MONTH_NAMES.map((name, i) => `<option value="${i}" ${i === selectedMonth ? "selected" : ""}>${name}</option>`).join("");
+
+    const catForTab = CATS[tab];
+    const catFilterHTML = showFilterPanel
+      ? `<div class="cc-cat-filter-row">${catForTab.map((c) => `<button class="cc-cat-chip${filterCategory === c ? " active" : ""}" data-catfilter="${esc(c)}">${esc(c)}</button>`).join("")}</div>`
+      : "";
+
+    const listHTML = lista.length === 0
+      ? `<div class="cc-empty">No hay movimientos en este período. Toca "+ Agregar" para registrar el primero.</div>`
+      : `<ul class="cc-list">${lista.map((m) => {
+          const bc = badgeColors(m.type);
+          const time = new Date(m.createdAt).toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" });
+          return `
+        <li class="cc-row">
+          <div class="cc-row-left">
+            <div class="cc-badge" style="background:${bc.bg};color:${bc.fg}">${bc.icon}</div>
+            <div style="min-width:0">
+              <p class="cc-row-cat">${esc(m.category)}</p>
+              <p class="cc-row-meta">${m.medio ? esc(m.medio) + " · " : ""}${toDate(m.date).toLocaleDateString("es-CO", { day: "numeric", month: "short" })} · ${time}${m.note ? " · " + esc(m.note) : ""}</p>
+            </div>
+          </div>
+          <div class="cc-row-right">
+            <span class="cc-amount" style="color:${bc.fg}">${money(m.amount)}</span>
+            <button class="cc-del" data-editmov="${m.id}" title="Editar">✎</button>
+            <button class="cc-del" data-del="${m.id}">✕</button>
+          </div>
+        </li>`;
+        }).join("")}</ul>`;
+
+    const clearHTML = movimientos.length === 0 ? "" : (
+      !confirmClear
+        ? `<button class="cc-clear-link" id="cc-clear-start">Borrar todos los movimientos</button>`
+        : `<div class="cc-confirm">
+            <span>¿Seguro? Esto no se puede deshacer.</span>
+            <button style="color:var(--coralText)" id="cc-clear-yes">Sí, borrar todo</button>
+            <button style="color:var(--navySoft)" id="cc-clear-no">Cancelar</button>
+          </div>`
+    );
+
+    const catOptions = CATS[fType];
+    const chipsHTML = catOptions.map((c) => `<button class="cc-chip${fCategory === c ? " active" : ""}" data-chip="${esc(c)}">${esc(c)}</button>`).join("");
+    const medioOptions = MEDIOS.map((m) => `<option value="${m}" ${m === fMedio ? "selected" : ""}>${m}</option>`).join("");
+    const typeLabels = { ingreso: "Ingreso", egreso: "Egreso", por_cobrar: "Por cobrar", por_pagar: "Por pagar" };
+    const typeBtnsHTML = TABS.map((t2) => `<button class="cc-type-btn${fType === t2.key ? " active-" + t2.key : ""}" data-type="${t2.key}">${t2.label}</button>`).join("");
+
+    let pendingHTML = "";
+    if (tab === "por_cobrar") pendingHTML = `<div class="cc-pending-total">Total por cobrar en el período <span>${money(porCobrar)}</span></div>`;
+    if (tab === "por_pagar") pendingHTML = `<div class="cc-pending-total pagar">Total por pagar en el período <span>${money(porPagar)}</span></div>`;
+
+    let pageTitle = "Balance";
+    let headerActionsHTML = "";
+    let pageBodyHTML = "";
+
+    if (page === "balance") {
+      headerActionsHTML = `
+      <button class="cc-btn-navy" id="cc-caja-btn">${cajaAbierta ? "Cerrar caja" : "Abrir caja"}</button>
+      <button class="cc-btn-outline" id="cc-download-btn">Descargar reporte</button>`;
+      pageBodyHTML = `
+      <div class="cc-filter-row">
+        <button class="cc-filter-btn${showFilterPanel ? " on" : ""}" id="cc-filter-toggle">⚙ Filtrar</button>
+        <div class="cc-select-wrap">
+          <select class="cc-select" id="cc-period">${periodOptions}</select>
+          <span class="cc-select-chevron">▾</span>
+        </div>
+      </div>
+      ${period === "year" ? `
+      <div class="cc-filter-row">
+        <div class="cc-select-wrap">
+          <select class="cc-select" id="cc-year">${yearOptions}</select>
+          <span class="cc-select-chevron">▾</span>
+        </div>
+      </div>` : ""}
+      ${period === "month" ? `
+      <div class="cc-filter-row">
+        <div class="cc-select-wrap" style="flex:1.4;">
+          <select class="cc-select" id="cc-month">${monthOptions}</select>
+          <span class="cc-select-chevron">▾</span>
+        </div>
+        <div class="cc-select-wrap">
+          <select class="cc-select" id="cc-year">${yearOptions}</select>
+          <span class="cc-select-chevron">▾</span>
+        </div>
+      </div>` : ""}
+      ${period === "week" ? `
+      <div class="cc-filter-row">
+        <div class="cc-select-wrap" style="flex:none;width:100%;">
+          <button type="button" class="cc-date-trigger" id="cc-weekdate">${formatDateDisplay(selectedWeekDate)}<span class="cal-ic">📅</span></button>
+        </div>
+      </div>` : ""}
+      ${period === "day" ? `
+      <div class="cc-filter-row">
+        <div class="cc-select-wrap" style="flex:none;width:100%;">
+          <button type="button" class="cc-date-trigger" id="cc-daydate">${formatDateDisplay(selectedDay)}<span class="cal-ic">📅</span></button>
+        </div>
+      </div>` : ""}
+      <div class="cc-filter-row">
+        <div class="cc-range-pill">📅 ${rangeLabel(period, periodRef)}</div>
+      </div>
+      ${catFilterHTML}
+
+      <div class="cc-search-wrap">
+        <span class="cc-search-icon">🔍</span>
+        <input class="cc-search" id="cc-search" placeholder="Buscar concepto..." value="${esc(search)}" />
+      </div>
+
+      <div class="cc-stats">
+        <div class="cc-stat">
+          <div class="cc-stat-icon navy">↕</div>
+          <p class="cc-stat-label">Balance</p>
+          <p class="cc-stat-amount" style="color:${balance < 0 ? "var(--coralText)" : "var(--navy)"}">${money(balance)}</p>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-icon mint">↑</div>
+          <p class="cc-stat-label">Ingresos</p>
+          <p class="cc-stat-amount" style="color:var(--mintText)">${money(ing)}</p>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-icon coral">↓</div>
+          <p class="cc-stat-label">Egresos</p>
+          <p class="cc-stat-amount" style="color:var(--coralText)">${money(eg)}</p>
+        </div>
+      </div>
+
+      <div class="cc-card">
+        <p class="cc-card-label">${chartCaption(period, periodRef)}</p>
+        ${chartSVG(periodRef)}
+      </div>
+
+      <div class="cc-tabs">
+        ${TABS.map((t2) => `<button class="cc-tab${tab === t2.key ? " active" : ""}" data-tab="${t2.key}">${t2.label}</button>`).join("")}
+      </div>
+      ${pendingHTML}
+      <div class="cc-count-row"><span class="cc-count">${lista.length} ${lista.length === 1 ? "registro" : "registros"}</span></div>
+
+      ${listHTML}
+
+      <div style="margin-bottom:16px">${clearHTML}</div>
+    `;
+    } else if (page === "home") {
+      pageTitle = "Inicio";
+      headerActionsHTML = "";
+      pageBodyHTML = renderHomeContent(now);
+    } else if (page === "deudas") {
+      pageTitle = "Deudas";
+      headerActionsHTML = "";
+      pageBodyHTML = renderDeudasContent();
+    } else if (page === "vender") {
+      pageTitle = "Vender";
+      headerActionsHTML = `<button class="cc-btn-outline" id="cc-new-product" style="flex:none; padding-left:18px; padding-right:18px;">+ Nuevo producto</button>`;
+      pageBodyHTML = renderVenderContent();
+    } else if (page === "estadisticas") {
+      pageTitle = "Estadísticas";
+      headerActionsHTML = `<button class="cc-btn-outline" id="cc-stats-settings" style="flex:none;width:38px;padding:9px;margin-left:auto;">⚙</button>`;
+      pageBodyHTML = renderEstadisticasContent(now);
+    } else if (page === "inventario") {
+      pageTitle = "Inventario";
+      headerActionsHTML = `<button class="cc-btn-outline" id="cc-new-product" style="flex:none;padding-left:18px;padding-right:18px;margin-left:auto;">+ Nuevo producto</button>`;
+      pageBodyHTML = renderInventarioContent();
+    } else if (page === "clientes") {
+      pageTitle = "Clientes";
+      headerActionsHTML = `<button class="cc-btn-outline" id="cc-new-client" style="flex:none;padding-left:18px;padding-right:18px;margin-left:auto;">+ Nuevo cliente</button>`;
+      pageBodyHTML = renderClientesContent();
+    } else if (page === "proveedores") {
+      pageTitle = "Proveedores";
+      headerActionsHTML = `<button class="cc-btn-outline" id="cc-new-proveedor" style="flex:none;padding-left:18px;padding-right:18px;margin-left:auto;">+ Nuevo proveedor</button>`;
+      pageBodyHTML = renderProveedoresContent();
+    } else if (page === "config") {
+      pageTitle = "Configuraciones";
+      headerActionsHTML = "";
+      pageBodyHTML = renderConfiguracionesContent();
+    } else if (page === "ayuda") {
+      pageTitle = "Ayuda";
+      headerActionsHTML = "";
+      pageBodyHTML = renderAyudaContent();
+    }
+
+    root.innerHTML = `
+      ${renderSidebar()}
+
+      <div class="cc-wrap">
+        <div class="cc-topbar">
+          <button class="cc-hamburger" id="cc-hamburger">☰</button>
+          <h1 class="cc-page-title">${pageTitle}</h1>
+        </div>
+
+        <div class="cc-header-actions">${headerActionsHTML}</div>
+
+        ${pageBodyHTML}
+      </div>
+
+      <div class="cc-overlay${showForm ? " open" : ""}" id="cc-overlay"></div>
+      <div class="cc-sheet${showForm ? " open" : ""}">
+        <div class="cc-sheet-head">
+          <h3 class="cc-sheet-title">${editingMovimientoId ? "Editar movimiento" : "Nuevo movimiento"}</h3>
+          <button class="cc-x" id="cc-close">✕</button>
+        </div>
+        <div class="cc-type-row">${typeBtnsHTML}</div>
+        <label class="cc-label">Monto</label>
+        <input class="cc-input amount" type="number" inputmode="decimal" id="cc-amount" placeholder="0" value="${esc(fAmount)}" />
+        <label class="cc-label">Categoría</label>
+        <div class="cc-chips">${chipsHTML}</div>
+        <input class="cc-input" type="text" id="cc-category" placeholder="O escribe una categoría" value="${esc(fCategory)}" />
+        <label class="cc-label">Medio de pago</label>
+        <select class="cc-input" id="cc-medio">${medioOptions}</select>
+        <label class="cc-label">Fecha</label>
+        <button type="button" class="cc-date-trigger" id="cc-date" style="margin-bottom:14px;">${formatDateDisplay(fDate)}<span class="cal-ic">📅</span></button>
+        <label class="cc-label">Nota (opcional)</label>
+        <input class="cc-input" type="text" id="cc-note" placeholder="Ej. Venta mostrador" value="${esc(fNote)}" />
+        ${errorMsg ? `<p class="cc-error">${esc(errorMsg)}</p>` : ""}
+        <button class="cc-submit" id="cc-submit">${editingMovimientoId ? "Guardar cambios" : "Guardar " + typeLabels[fType].toLowerCase()}</button>
+      </div>
+
+      ${renderCheckoutSheet()}
+      ${renderProductFormSheet()}
+      ${renderExportDialogSheet()}
+      ${renderClientFormSheet()}
+      ${renderClienteDetailSheet()}
+      ${renderProveedorFormSheet()}
+      ${renderProveedorDetailSheet()}
+      ${renderProfileEditSheet()}
+      ${renderDatePickerSheet()}
+
+      <div class="cc-bottomnav">
+        ${BOTTOM_NAV.map((b) => `
+          <button class="cc-bottomnav-item${page === b.key ? " active" : ""}" data-bottomnav="${b.key}">
+            <span class="cc-bottomnav-icon">${b.icon}</span>${b.label}
+          </button>`).join("")}
+      </div>
+
+      ${page !== "vender" && page !== "home" && page !== "deudas" ? '<button class="cc-fab-yellow" id="cc-fab">+</button>' : ""}
+
+      ${toast ? `<div class="cc-toast">${esc(toast)}</div>` : ""}
+    `;
+
+    wireEvents();
+  }
+
+  function renderCheckoutSheet() {
+    const items = Object.entries(cart).map(([id, qty]) => {
+      const p = productos.find((x) => x.id === id);
+      return p ? { p, qty } : null;
+    }).filter(Boolean);
+    const itemsHTML = items.length === 0
+      ? `<p style="color:var(--navySoft);font-size:13px;">Tu carrito está vacío.</p>`
+      : items.map(({ p, qty }) => `
+        <div class="cc-checkout-item">
+          <div>
+            <p class="cc-checkout-item-name">${esc(p.name)}</p>
+            <p class="cc-checkout-item-sub">${money(p.price)} c/u</p>
+          </div>
+          <div class="cc-qty-stepper">
+            <button class="cc-qty-btn" data-qtydec="${p.id}">−</button>
+            <span class="cc-qty-val">${qty}</span>
+            <button class="cc-qty-btn" data-qtyinc="${p.id}">+</button>
+          </div>
+        </div>`).join("");
+    const medioOptionsHTML = MEDIOS.map((m) => `<option value="${m}" ${m === ventaMedio ? "selected" : ""}>${m}</option>`).join("");
+
+    return `
+      <div class="cc-overlay${showCheckout ? " open" : ""}" id="cc-checkout-overlay"></div>
+      <div class="cc-sheet${showCheckout ? " open" : ""}">
+        <div class="cc-sheet-head">
+          <h3 class="cc-sheet-title">Confirmar venta</h3>
+          <button class="cc-x" id="cc-checkout-close">✕</button>
+        </div>
+        ${itemsHTML}
+        <div class="cc-checkout-total-row"><span>Total</span><span>${money(cartTotal())}</span></div>
+        <label class="cc-label" style="margin-top:10px;">Medio de pago</label>
+        <select class="cc-input" id="cc-venta-medio">${medioOptionsHTML}</select>
+        ${ventaError ? `<p class="cc-error">${esc(ventaError)}</p>` : ""}
+        <button class="cc-submit" id="cc-confirm-venta">Confirmar venta</button>
+      </div>`;
+  }
+
+  function renderProductFormSheet() {
+    return `
+      <div class="cc-overlay${showProductForm ? " open" : ""}" id="cc-product-overlay"></div>
+      <div class="cc-sheet${showProductForm ? " open" : ""}">
+        <div class="cc-sheet-head">
+          <h3 class="cc-sheet-title">${editingProductId ? "Editar producto" : "Nuevo producto"}</h3>
+          <button class="cc-x" id="cc-product-close">✕</button>
+        </div>
+        <label class="cc-label">Nombre</label>
+        <input class="cc-input" type="text" id="cc-p-name" placeholder="Ej. Café americano" value="${esc(pFormName)}" />
+        <label class="cc-label">Precio</label>
+        <input class="cc-input amount" type="number" inputmode="decimal" id="cc-p-price" placeholder="0" value="${esc(pFormPrice)}" />
+        <label class="cc-label">Stock (opcional)</label>
+        <input class="cc-input" type="number" inputmode="numeric" id="cc-p-stock" placeholder="Déjalo vacío si no llevas inventario" value="${esc(pFormStock)}" />
+        ${errorMsg && showProductForm ? `<p class="cc-error">${esc(errorMsg)}</p>` : ""}
+        <button class="cc-submit" id="cc-save-product">${editingProductId ? "Guardar cambios" : "Guardar producto"}</button>
+      </div>`;
+  }
+
+  function resetForm() {
+    fType = tab === "ingreso" || tab === "egreso" ? tab : "ingreso";
+    fAmount = ""; fCategory = ""; fMedio = "Efectivo"; fNote = ""; fDate = todayStr(); errorMsg = "";
+    editingMovimientoId = null;
+  }
+  function resetProductForm() {
+    pFormName = ""; pFormPrice = ""; pFormStock = ""; errorMsg = ""; editingProductId = null;
+  }
+
+  function wireEvents() {
+    const root = document.getElementById("cc-root");
+
+    const hamburger = document.getElementById("cc-hamburger");
+    if (hamburger) hamburger.addEventListener("click", () => { sidebarOpen = true; render(); });
+    const sbOverlay = document.getElementById("cc-sb-overlay");
+    if (sbOverlay) sbOverlay.addEventListener("click", () => { sidebarOpen = false; render(); });
+    const sbClose = document.getElementById("cc-sb-close");
+    if (sbClose) sbClose.addEventListener("click", () => { sidebarOpen = false; render(); });
+
+    function goToPage(key) {
+      sidebarOpen = false;
+      const validPages = ["home", "balance", "deudas", "vender", "estadisticas", "inventario", "clientes", "proveedores", "config", "ayuda"];
+      if (validPages.includes(key)) {
+        if (key === "config") {
+          cfgBusinessName = settings.businessName || "";
+          cfgOwnerName = settings.ownerName || "";
+          cfgCurrency = settings.currency || "$";
+        }
+        page = key; render(); return;
+      }
+      if (key === "logout") {
+        if (!settings.pin) { showToast("Activa un PIN en Configuraciones para poder bloquear la app"); return; }
+        sessionLocked = true; lockPinInput = ""; lockError = ""; render(); return;
+      }
+      showToast("Esta sección no está incluida en esta versión personal");
+    }
+
+    root.querySelectorAll("[data-nav]").forEach((btn) => {
+      btn.addEventListener("click", () => goToPage(btn.getAttribute("data-nav")));
+    });
+
+    root.querySelectorAll("[data-bottomnav]").forEach((btn) => {
+      btn.addEventListener("click", () => goToPage(btn.getAttribute("data-bottomnav")));
+    });
+
+    root.querySelectorAll("[data-homenav]").forEach((btn) => {
+      btn.addEventListener("click", () => goToPage(btn.getAttribute("data-homenav")));
+    });
+
+    const homeRegistrarVenta = document.getElementById("cc-home-registrar-venta");
+    if (homeRegistrarVenta) homeRegistrarVenta.addEventListener("click", () => goToPage("vender"));
+    const homeViewAllStats = document.getElementById("cc-home-viewall-stats");
+    if (homeViewAllStats) homeViewAllStats.addEventListener("click", () => goToPage("estadisticas"));
+
+    const editProfileBtn = document.getElementById("cc-sb-edit-profile");
+    if (editProfileBtn) editProfileBtn.addEventListener("click", () => {
+      cfgBusinessName = settings.businessName || "";
+      cfgOwnerName = settings.ownerName || "";
+      sidebarOpen = false;
+      showProfileEditSheet = true;
+      render();
+    });
+    const profileEditOverlay = document.getElementById("cc-profile-edit-overlay");
+    if (profileEditOverlay) profileEditOverlay.addEventListener("click", () => { showProfileEditSheet = false; render(); });
+    const profileEditClose = document.getElementById("cc-profile-edit-close");
+    if (profileEditClose) profileEditClose.addEventListener("click", () => { showProfileEditSheet = false; render(); });
+    const saveProfileEditBtn = document.getElementById("cc-save-profile-edit");
+    if (saveProfileEditBtn) saveProfileEditBtn.addEventListener("click", () => {
+      const businessVal = document.getElementById("cc-pf-business").value.trim();
+      const ownerVal = document.getElementById("cc-pf-owner").value.trim();
+      settings.businessName = businessVal || "Mi negocio";
+      settings.ownerName = ownerVal || "Propietario";
+      saveSettings();
+      showProfileEditSheet = false;
+      showToast("Perfil actualizado");
+      render();
+    });
+
+    const cajaBtn = document.getElementById("cc-caja-btn");
+    if (cajaBtn) cajaBtn.addEventListener("click", () => {
+      cajaAbierta = !cajaAbierta;
+      showToast(cajaAbierta ? "Caja abierta" : "Caja cerrada");
+    });
+
+    const downloadBtn = document.getElementById("cc-download-btn");
+    if (downloadBtn) downloadBtn.addEventListener("click", () => { showExportDialog = true; render(); });
+
+    const exportOverlay = document.getElementById("cc-export-overlay");
+    if (exportOverlay) exportOverlay.addEventListener("click", () => { showExportDialog = false; render(); });
+    const exportClose = document.getElementById("cc-export-close");
+    if (exportClose) exportClose.addEventListener("click", () => { showExportDialog = false; render(); });
+
+    root.querySelectorAll("[data-exportperiod]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const chosenPeriod = btn.getAttribute("data-exportperiod");
+        const now = new Date();
+        const [s, e] = rangeFor(chosenPeriod, now);
+        const rows = movimientos.filter((m) => { const t = toDate(m.date).getTime(); return t >= s.getTime() && t < e.getTime() && m.type === tab; });
+        showExportDialog = false;
+        render();
+        if (rows.length === 0) { showToast("No hay datos para exportar en ese período"); return; }
+        try {
+          const result = await saveXLSX(rows);
+          showToast(result && result.status === "delivered" ? "Reporte enviado" : "Reporte descargado");
+        } catch (err) {
+          showToast(downloadErrorMessage(err));
+        }
+      });
+    });
+
+    const filterToggle = document.getElementById("cc-filter-toggle");
+    if (filterToggle) filterToggle.addEventListener("click", () => { showFilterPanel = !showFilterPanel; render(); });
+
+    root.querySelectorAll("[data-catfilter]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const c = btn.getAttribute("data-catfilter");
+        filterCategory = filterCategory === c ? null : c;
+        render();
+      });
+    });
+
+    const periodSel = document.getElementById("cc-period");
+    if (periodSel) periodSel.addEventListener("change", () => { period = periodSel.value; render(); });
+
+    const yearSel = document.getElementById("cc-year");
+    if (yearSel) yearSel.addEventListener("change", () => { selectedYear = parseInt(yearSel.value, 10); render(); });
+
+    const monthSel = document.getElementById("cc-month");
+    if (monthSel) monthSel.addEventListener("change", () => { selectedMonth = parseInt(monthSel.value, 10); render(); });
+
+    const searchInput = document.getElementById("cc-search");
+    if (searchInput) searchInput.addEventListener("input", () => {
+      search = searchInput.value; render();
+      const el = document.getElementById("cc-search");
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+    });
+
+    const productSearchInput = document.getElementById("cc-product-search");
+    if (productSearchInput) productSearchInput.addEventListener("input", () => {
+      productSearch = productSearchInput.value; render();
+      const el = document.getElementById("cc-product-search");
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+    });
+
+    root.querySelectorAll("[data-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => { tab = btn.getAttribute("data-tab"); filterCategory = null; showFilterPanel = false; render(); });
+    });
+
+    root.querySelectorAll("[data-del]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-del");
+        movimientos = movimientos.filter((m) => m.id !== id);
+        saveData(); render();
+      });
+    });
+
+    root.querySelectorAll("[data-editmov]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const m = movimientos.find((x) => x.id === btn.getAttribute("data-editmov"));
+        if (!m) return;
+        editingMovimientoId = m.id;
+        fType = m.type;
+        fAmount = String(m.amount);
+        fCategory = m.category;
+        fMedio = m.medio || "Efectivo";
+        fNote = m.note || "";
+        fDate = m.date;
+        errorMsg = "";
+        showForm = true;
+        render();
+      });
+    });
+
+    const clearStart = document.getElementById("cc-clear-start");
+    if (clearStart) clearStart.addEventListener("click", () => { confirmClear = true; render(); });
+    const clearYes = document.getElementById("cc-clear-yes");
+    if (clearYes) clearYes.addEventListener("click", () => { movimientos = []; confirmClear = false; saveData(); render(); });
+    const clearNo = document.getElementById("cc-clear-no");
+    if (clearNo) clearNo.addEventListener("click", () => { confirmClear = false; render(); });
+
+    const fab = document.getElementById("cc-fab");
+    if (fab) fab.addEventListener("click", () => { resetForm(); showForm = true; render(); });
+
+    const overlay = document.getElementById("cc-overlay");
+    if (overlay) overlay.addEventListener("click", () => { showForm = false; render(); });
+    const closeBtn = document.getElementById("cc-close");
+    if (closeBtn) closeBtn.addEventListener("click", () => { showForm = false; render(); });
+
+    root.querySelectorAll("[data-type]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        fType = btn.getAttribute("data-type"); fCategory = "";
+        fAmount = document.getElementById("cc-amount").value;
+        fNote = document.getElementById("cc-note").value;
+        fMedio = document.getElementById("cc-medio").value;
+        render();
+      });
+    });
+
+    root.querySelectorAll("[data-chip]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        fCategory = btn.getAttribute("data-chip");
+        fAmount = document.getElementById("cc-amount").value;
+        fNote = document.getElementById("cc-note").value;
+        fMedio = document.getElementById("cc-medio").value;
+        render();
+      });
+    });
+
+    const ccDateTrigger = document.getElementById("cc-date");
+    if (ccDateTrigger) ccDateTrigger.addEventListener("click", () => { openDatePicker("movdate"); render(); });
+
+    const weekDateBtn = document.getElementById("cc-weekdate");
+    if (weekDateBtn) weekDateBtn.addEventListener("click", () => { openDatePicker("weekdate"); render(); });
+
+    const dayDateBtn = document.getElementById("cc-daydate");
+    if (dayDateBtn) dayDateBtn.addEventListener("click", () => { openDatePicker("daydate"); render(); });
+
+    const dpOverlay = document.getElementById("cc-datepicker-overlay");
+    if (dpOverlay) dpOverlay.addEventListener("click", () => { datePickerOpen = false; render(); });
+    const dpClose = document.getElementById("cc-datepicker-close");
+    if (dpClose) dpClose.addEventListener("click", () => { datePickerOpen = false; render(); });
+
+    const dpPrev = document.getElementById("cc-dp-prev");
+    if (dpPrev) dpPrev.addEventListener("click", () => {
+      datePickerViewMonth -= 1;
+      if (datePickerViewMonth < 0) { datePickerViewMonth = 11; datePickerViewYear -= 1; }
+      render();
+    });
+    const dpNext = document.getElementById("cc-dp-next");
+    if (dpNext) dpNext.addEventListener("click", () => {
+      datePickerViewMonth += 1;
+      if (datePickerViewMonth > 11) { datePickerViewMonth = 0; datePickerViewYear += 1; }
+      render();
+    });
+    const dpToday = document.getElementById("cc-dp-today");
+    if (dpToday) dpToday.addEventListener("click", () => {
+      const t = todayStr();
+      setSelectedValueForTarget(datePickerTarget, t);
+      datePickerOpen = false;
+      render();
+    });
+    root.querySelectorAll("[data-dppick]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        setSelectedValueForTarget(datePickerTarget, btn.getAttribute("data-dppick"));
+        datePickerOpen = false;
+        render();
+      });
+    });
+
+    const submitBtn = document.getElementById("cc-submit");
+    if (submitBtn) submitBtn.addEventListener("click", () => {
+      const amountVal = document.getElementById("cc-amount").value;
+      const categoryVal = document.getElementById("cc-category").value;
+      const medioVal = document.getElementById("cc-medio").value;
+      const noteVal = document.getElementById("cc-note").value;
+      const dateVal = fDate || todayStr();
+      const amt = parseFloat(amountVal);
+      if (!amt || amt <= 0) {
+        errorMsg = "Ingresa un monto válido.";
+        fAmount = amountVal; fCategory = categoryVal; fMedio = medioVal; fNote = noteVal; fDate = dateVal;
+        render();
+        return;
+      }
+      if (editingMovimientoId) {
+        const m = movimientos.find((x) => x.id === editingMovimientoId);
+        if (m) {
+          m.type = fType;
+          m.amount = amt;
+          m.category = categoryVal.trim() || CATS[fType][CATS[fType].length - 1];
+          m.medio = medioVal;
+          m.note = noteVal.trim();
+          m.date = dateVal;
+        }
+        saveData();
+        tab = fType;
+        resetForm();
+        showForm = false;
+        showToast("Movimiento actualizado");
+        render();
+        return;
+      }
+      movimientos.unshift({
+        id: uid(), type: fType, amount: amt,
+        category: categoryVal.trim() || CATS[fType][CATS[fType].length - 1],
+        medio: medioVal, note: noteVal.trim(), date: dateVal, createdAt: Date.now(),
+      });
+      saveData();
+      tab = fType;
+      resetForm();
+      showForm = false;
+      render();
+    });
+
+    // ---- Vender page events ----
+    const newProductBtn = document.getElementById("cc-new-product");
+    if (newProductBtn) newProductBtn.addEventListener("click", () => { resetProductForm(); showProductForm = true; render(); });
+
+    root.querySelectorAll("[data-addproduct]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-addproduct");
+        const p = productos.find((x) => x.id === id);
+        if (!p) return;
+        if (stockAvailable(p) <= 0) { showToast("No hay más stock disponible"); return; }
+        cart[id] = (cart[id] || 0) + 1;
+        render();
+      });
+    });
+
+    const cobrarBtn = document.getElementById("cc-cobrar-btn");
+    if (cobrarBtn) cobrarBtn.addEventListener("click", () => { ventaError = ""; showCheckout = true; render(); });
+
+    const checkoutOverlay = document.getElementById("cc-checkout-overlay");
+    if (checkoutOverlay) checkoutOverlay.addEventListener("click", () => { showCheckout = false; render(); });
+    const checkoutClose = document.getElementById("cc-checkout-close");
+    if (checkoutClose) checkoutClose.addEventListener("click", () => { showCheckout = false; render(); });
+
+    root.querySelectorAll("[data-qtyinc]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-qtyinc");
+        const p = productos.find((x) => x.id === id);
+        if (p && stockAvailable(p) <= 0) { showToast("No hay más stock disponible"); return; }
+        cart[id] = (cart[id] || 0) + 1;
+        render();
+      });
+    });
+    root.querySelectorAll("[data-qtydec]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-qtydec");
+        if (!cart[id]) return;
+        cart[id] -= 1;
+        if (cart[id] <= 0) delete cart[id];
+        if (Object.keys(cart).length === 0) showCheckout = false;
+        render();
+      });
+    });
+
+    const ventaMedioSel = document.getElementById("cc-venta-medio");
+    if (ventaMedioSel) ventaMedioSel.addEventListener("change", () => { ventaMedio = ventaMedioSel.value; });
+
+    const confirmVentaBtn = document.getElementById("cc-confirm-venta");
+    if (confirmVentaBtn) confirmVentaBtn.addEventListener("click", () => {
+      const items = Object.entries(cart).map(([id, qty]) => ({ p: productos.find((x) => x.id === id), qty })).filter((x) => x.p);
+      if (items.length === 0) { ventaError = "Tu carrito está vacío."; render(); return; }
+      const medioVal = document.getElementById("cc-venta-medio").value;
+      const total = items.reduce((s, it) => s + it.p.price * it.qty, 0);
+      const note = items.map((it) => `${it.qty}x ${it.p.name}`).join(", ");
+      movimientos.unshift({
+        id: uid(), type: "ingreso", amount: total, category: "Ventas",
+        medio: medioVal, note, date: todayStr(), createdAt: Date.now(),
+      });
+      items.forEach((it) => {
+        ventasDetalle.unshift({
+          id: uid(), productId: it.p.id, name: it.p.name, qty: it.qty,
+          subtotal: it.p.price * it.qty, date: todayStr(), createdAt: Date.now(),
+        });
+        if (it.p.stock !== null && it.p.stock !== undefined) {
+          it.p.stock = Math.max(0, it.p.stock - it.qty);
+        }
+      });
+      saveData();
+      saveProducts();
+      saveVentasDetalle();
+      cart = {};
+      showCheckout = false;
+      ventaError = "";
+      tab = "ingreso";
+      showToast("Venta registrada");
+      render();
+    });
+
+    const productOverlay = document.getElementById("cc-product-overlay");
+    if (productOverlay) productOverlay.addEventListener("click", () => { showProductForm = false; render(); });
+    const productClose = document.getElementById("cc-product-close");
+    if (productClose) productClose.addEventListener("click", () => { showProductForm = false; render(); });
+
+    const saveProductBtn = document.getElementById("cc-save-product");
+    if (saveProductBtn) saveProductBtn.addEventListener("click", () => {
+      const nameVal = document.getElementById("cc-p-name").value.trim();
+      const priceVal = parseFloat(document.getElementById("cc-p-price").value);
+      const stockRaw = document.getElementById("cc-p-stock").value;
+      const stockVal = stockRaw.trim() === "" ? null : Math.max(0, parseInt(stockRaw, 10) || 0);
+      if (!nameVal) { errorMsg = "Ingresa un nombre para el producto."; pFormName = nameVal; render(); return; }
+      if (!priceVal || priceVal <= 0) { errorMsg = "Ingresa un precio válido."; pFormName = nameVal; pFormPrice = document.getElementById("cc-p-price").value; render(); return; }
+      if (editingProductId) {
+        const p = productos.find((x) => x.id === editingProductId);
+        if (p) { p.name = nameVal; p.price = priceVal; p.stock = stockVal; }
+        saveProducts();
+        resetProductForm();
+        showProductForm = false;
+        showToast("Producto actualizado");
+        render();
+        return;
+      }
+      productos.unshift({ id: uid(), name: nameVal, price: priceVal, stock: stockVal, createdAt: Date.now() });
+      saveProducts();
+      resetProductForm();
+      showProductForm = false;
+      showToast("Producto agregado");
+      render();
+    });
+
+    // ---- Inventario page events ----
+    const invSearchInput = document.getElementById("cc-inv-search");
+    if (invSearchInput) invSearchInput.addEventListener("input", () => {
+      invSearch = invSearchInput.value; render();
+      const el = document.getElementById("cc-inv-search");
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+    });
+
+    root.querySelectorAll("[data-editproduct]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const p = productos.find((x) => x.id === btn.getAttribute("data-editproduct"));
+        if (!p) return;
+        editingProductId = p.id;
+        pFormName = p.name;
+        pFormPrice = String(p.price);
+        pFormStock = p.stock == null ? "" : String(p.stock);
+        errorMsg = "";
+        showProductForm = true;
+        render();
+      });
+    });
+
+    root.querySelectorAll("[data-delproduct]").forEach((btn) => {
+      btn.addEventListener("click", () => { confirmDeleteProductId = btn.getAttribute("data-delproduct"); render(); });
+    });
+    root.querySelectorAll("[data-delproduct-yes]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-delproduct-yes");
+        productos = productos.filter((x) => x.id !== id);
+        confirmDeleteProductId = null;
+        saveProducts();
+        showToast("Producto eliminado");
+        render();
+      });
+    });
+    root.querySelectorAll("[data-delproduct-no]").forEach((btn) => {
+      btn.addEventListener("click", () => { confirmDeleteProductId = null; render(); });
+    });
+
+    root.querySelectorAll("[data-stockinc]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const p = productos.find((x) => x.id === btn.getAttribute("data-stockinc"));
+        if (!p) return;
+        p.stock = (p.stock || 0) + 1;
+        saveProducts();
+        render();
+      });
+    });
+    root.querySelectorAll("[data-stockdec]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const p = productos.find((x) => x.id === btn.getAttribute("data-stockdec"));
+        if (!p) return;
+        p.stock = Math.max(0, (p.stock || 0) - 1);
+        saveProducts();
+        render();
+      });
+    });
+
+    // ---- Estadísticas page events ----
+    const statsPeriodSel = document.getElementById("cc-stats-period");
+    if (statsPeriodSel) statsPeriodSel.addEventListener("change", () => { statsPeriod = statsPeriodSel.value; render(); });
+
+    const gotoVenderBtn = document.getElementById("cc-goto-vender");
+    if (gotoVenderBtn) gotoVenderBtn.addEventListener("click", () => { page = "vender"; render(); });
+
+    const statsSettingsBtn = document.getElementById("cc-stats-settings");
+    if (statsSettingsBtn) statsSettingsBtn.addEventListener("click", () => { showToast("Sin ajustes adicionales en esta versión"); });
+
+    root.querySelectorAll("[data-comingsoon]").forEach((btn) => {
+      btn.addEventListener("click", () => { showToast("Esta función no está incluida en esta versión personal"); });
+    });
+
+    // ---- Clientes page events ----
+    const cliSearchInput = document.getElementById("cc-cli-search");
+    if (cliSearchInput) cliSearchInput.addEventListener("input", () => {
+      clienteSearch = cliSearchInput.value; render();
+      const el = document.getElementById("cc-cli-search");
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+    });
+
+    const newClientBtn = document.getElementById("cc-new-client");
+    if (newClientBtn) newClientBtn.addEventListener("click", () => {
+      editingClienteId = null; cFormName = ""; cFormPhone = ""; clienteFormError = "";
+      showClientForm = true; render();
+    });
+
+    const clientOverlay = document.getElementById("cc-client-overlay");
+    if (clientOverlay) clientOverlay.addEventListener("click", () => { showClientForm = false; render(); });
+    const clientClose = document.getElementById("cc-client-close");
+    if (clientClose) clientClose.addEventListener("click", () => { showClientForm = false; render(); });
+
+    const saveClientBtn = document.getElementById("cc-save-client");
+    if (saveClientBtn) saveClientBtn.addEventListener("click", () => {
+      const nameVal = document.getElementById("cc-c-name").value.trim();
+      const phoneVal = document.getElementById("cc-c-phone").value.trim();
+      if (!nameVal) { clienteFormError = "Ingresa un nombre."; render(); return; }
+      if (editingClienteId) {
+        const c = clientes.find((x) => x.id === editingClienteId);
+        if (c) { c.name = nameVal; c.phone = phoneVal; }
+        showToast("Cliente actualizado");
+      } else {
+        clientes.unshift({ id: uid(), name: nameVal, phone: phoneVal, createdAt: Date.now() });
+        showToast("Cliente agregado");
+      }
+      saveClientes();
+      showClientForm = false;
+      editingClienteId = null; cFormName = ""; cFormPhone = ""; clienteFormError = "";
+      render();
+    });
+
+    root.querySelectorAll("[data-openclient]").forEach((row) => {
+      row.addEventListener("click", () => {
+        detailClienteId = row.getAttribute("data-openclient");
+        activeClienteAction = null;
+        clienteFormError = "";
+        confirmDeleteClienteId = null;
+        showClienteDetail = true;
+        render();
+      });
+    });
+
+    const detailOverlay = document.getElementById("cc-detail-overlay");
+    if (detailOverlay) detailOverlay.addEventListener("click", () => { showClienteDetail = false; activeClienteAction = null; render(); });
+    const detailClose = document.getElementById("cc-detail-close");
+    if (detailClose) detailClose.addEventListener("click", () => { showClienteDetail = false; activeClienteAction = null; render(); });
+
+    root.querySelectorAll("[data-clientaction]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const action = btn.getAttribute("data-clientaction");
+        activeClienteAction = activeClienteAction === action ? null : action;
+        clienteFormError = "";
+        fiadoAmount = ""; fiadoNote = ""; abonoAmount = ""; abonoNote = "";
+        render();
+      });
+    });
+
+    const saveFiadoBtn = document.getElementById("cc-save-fiado");
+    if (saveFiadoBtn) saveFiadoBtn.addEventListener("click", () => {
+      const amt = parseFloat(document.getElementById("cc-fiado-amount").value);
+      const note = document.getElementById("cc-fiado-note").value.trim();
+      if (!amt || amt <= 0) { clienteFormError = "Ingresa un monto válido."; render(); return; }
+      const c = clientes.find((x) => x.id === detailClienteId);
+      clienteMovimientos.unshift({ id: uid(), clienteId: detailClienteId, tipo: "fiado", monto: amt, nota: note, date: todayStr(), createdAt: Date.now() });
+      movimientos.unshift({ id: uid(), type: "por_cobrar", amount: amt, category: "Cliente", medio: "", note: (c ? c.name + (note ? ": " + note : "") : note || "Fiado"), date: todayStr(), createdAt: Date.now() });
+      saveClienteMov(); saveData();
+      activeClienteAction = null; clienteFormError = "";
+      showToast("Fiado registrado");
+      render();
+    });
+
+    const saveAbonoBtn = document.getElementById("cc-save-abono");
+    if (saveAbonoBtn) saveAbonoBtn.addEventListener("click", () => {
+      const amt = parseFloat(document.getElementById("cc-abono-amount").value);
+      const note = document.getElementById("cc-abono-note").value.trim();
+      if (!amt || amt <= 0) { clienteFormError = "Ingresa un monto válido."; render(); return; }
+      const c = clientes.find((x) => x.id === detailClienteId);
+      clienteMovimientos.unshift({ id: uid(), clienteId: detailClienteId, tipo: "abono", monto: amt, nota: note, date: todayStr(), createdAt: Date.now() });
+      movimientos.unshift({ id: uid(), type: "ingreso", amount: amt, category: "Cobros", medio: "Efectivo", note: (c ? c.name + (note ? ": " + note : "") : note || "Abono"), date: todayStr(), createdAt: Date.now() });
+      saveClienteMov(); saveData();
+      activeClienteAction = null; clienteFormError = "";
+      showToast("Abono registrado");
+      render();
+    });
+
+    const editClientBtn = document.getElementById("cc-edit-client");
+    if (editClientBtn) editClientBtn.addEventListener("click", () => {
+      const c = clientes.find((x) => x.id === detailClienteId);
+      if (!c) return;
+      editingClienteId = c.id; cFormName = c.name; cFormPhone = c.phone || ""; clienteFormError = "";
+      showClienteDetail = false;
+      showClientForm = true;
+      render();
+    });
+
+    const delClientStart = document.getElementById("cc-delclient-start");
+    if (delClientStart) delClientStart.addEventListener("click", () => { confirmDeleteClienteId = detailClienteId; render(); });
+    const delClientYes = document.getElementById("cc-delclient-yes");
+    if (delClientYes) delClientYes.addEventListener("click", () => {
+      clientes = clientes.filter((x) => x.id !== detailClienteId);
+      clienteMovimientos = clienteMovimientos.filter((m) => m.clienteId !== detailClienteId);
+      saveClientes(); saveClienteMov();
+      showClienteDetail = false; confirmDeleteClienteId = null; detailClienteId = null;
+      showToast("Cliente eliminado");
+      render();
+    });
+    const delClientNo = document.getElementById("cc-delclient-no");
+    if (delClientNo) delClientNo.addEventListener("click", () => { confirmDeleteClienteId = null; render(); });
+
+    // ---- Proveedores page events ----
+    const pvSearchInput = document.getElementById("cc-pv-search");
+    if (pvSearchInput) pvSearchInput.addEventListener("input", () => {
+      proveedorSearch = pvSearchInput.value; render();
+      const el = document.getElementById("cc-pv-search");
+      if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
+    });
+
+    const newProveedorBtn = document.getElementById("cc-new-proveedor");
+    if (newProveedorBtn) newProveedorBtn.addEventListener("click", () => {
+      editingProveedorId = null; pvFormName = ""; pvFormPhone = ""; proveedorFormError = "";
+      showProveedorForm = true; render();
+    });
+
+    const proveedorOverlay = document.getElementById("cc-proveedor-overlay");
+    if (proveedorOverlay) proveedorOverlay.addEventListener("click", () => { showProveedorForm = false; render(); });
+    const proveedorClose = document.getElementById("cc-proveedor-close");
+    if (proveedorClose) proveedorClose.addEventListener("click", () => { showProveedorForm = false; render(); });
+
+    const saveProveedorBtn = document.getElementById("cc-save-proveedor");
+    if (saveProveedorBtn) saveProveedorBtn.addEventListener("click", () => {
+      const nameVal = document.getElementById("cc-pv-name").value.trim();
+      const phoneVal = document.getElementById("cc-pv-phone").value.trim();
+      if (!nameVal) { proveedorFormError = "Ingresa un nombre."; render(); return; }
+      if (editingProveedorId) {
+        const p = proveedores.find((x) => x.id === editingProveedorId);
+        if (p) { p.name = nameVal; p.phone = phoneVal; }
+        showToast("Proveedor actualizado");
+      } else {
+        proveedores.unshift({ id: uid(), name: nameVal, phone: phoneVal, createdAt: Date.now() });
+        showToast("Proveedor agregado");
+      }
+      saveProveedores();
+      showProveedorForm = false;
+      editingProveedorId = null; pvFormName = ""; pvFormPhone = ""; proveedorFormError = "";
+      render();
+    });
+
+    root.querySelectorAll("[data-openproveedor]").forEach((row) => {
+      row.addEventListener("click", () => {
+        detailProveedorId = row.getAttribute("data-openproveedor");
+        activeProveedorAction = null;
+        proveedorFormError = "";
+        confirmDeleteProveedorId = null;
+        showProveedorDetail = true;
+        render();
+      });
+    });
+
+    const pvDetailOverlay = document.getElementById("cc-pvdetail-overlay");
+    if (pvDetailOverlay) pvDetailOverlay.addEventListener("click", () => { showProveedorDetail = false; activeProveedorAction = null; render(); });
+    const pvDetailClose = document.getElementById("cc-pvdetail-close");
+    if (pvDetailClose) pvDetailClose.addEventListener("click", () => { showProveedorDetail = false; activeProveedorAction = null; render(); });
+
+    root.querySelectorAll("[data-proveedoraction]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const action = btn.getAttribute("data-proveedoraction");
+        activeProveedorAction = activeProveedorAction === action ? null : action;
+        proveedorFormError = "";
+        compraAmount = ""; compraNote = ""; pagoAmount = ""; pagoNote = "";
+        render();
+      });
+    });
+
+    const saveCompraBtn = document.getElementById("cc-save-compra");
+    if (saveCompraBtn) saveCompraBtn.addEventListener("click", () => {
+      const amt = parseFloat(document.getElementById("cc-compra-amount").value);
+      const note = document.getElementById("cc-compra-note").value.trim();
+      if (!amt || amt <= 0) { proveedorFormError = "Ingresa un monto válido."; render(); return; }
+      const p = proveedores.find((x) => x.id === detailProveedorId);
+      proveedorMovimientos.unshift({ id: uid(), proveedorId: detailProveedorId, tipo: "compra", monto: amt, nota: note, date: todayStr(), createdAt: Date.now() });
+      movimientos.unshift({ id: uid(), type: "por_pagar", amount: amt, category: "Proveedor", medio: "", note: (p ? p.name + (note ? ": " + note : "") : note || "Compra"), date: todayStr(), createdAt: Date.now() });
+      saveProveedorMov(); saveData();
+      activeProveedorAction = null; proveedorFormError = "";
+      showToast("Compra registrada");
+      render();
+    });
+
+    const savePagoBtn = document.getElementById("cc-save-pago");
+    if (savePagoBtn) savePagoBtn.addEventListener("click", () => {
+      const amt = parseFloat(document.getElementById("cc-pago-amount").value);
+      const note = document.getElementById("cc-pago-note").value.trim();
+      if (!amt || amt <= 0) { proveedorFormError = "Ingresa un monto válido."; render(); return; }
+      const p = proveedores.find((x) => x.id === detailProveedorId);
+      proveedorMovimientos.unshift({ id: uid(), proveedorId: detailProveedorId, tipo: "pago", monto: amt, nota: note, date: todayStr(), createdAt: Date.now() });
+      movimientos.unshift({ id: uid(), type: "egreso", amount: amt, category: "Proveedor", medio: "Efectivo", note: (p ? p.name + (note ? ": " + note : "") : note || "Pago"), date: todayStr(), createdAt: Date.now() });
+      saveProveedorMov(); saveData();
+      activeProveedorAction = null; proveedorFormError = "";
+      showToast("Pago registrado");
+      render();
+    });
+
+    const editProveedorBtn = document.getElementById("cc-edit-proveedor");
+    if (editProveedorBtn) editProveedorBtn.addEventListener("click", () => {
+      const p = proveedores.find((x) => x.id === detailProveedorId);
+      if (!p) return;
+      editingProveedorId = p.id; pvFormName = p.name; pvFormPhone = p.phone || ""; proveedorFormError = "";
+      showProveedorDetail = false;
+      showProveedorForm = true;
+      render();
+    });
+
+    const delProveedorStart = document.getElementById("cc-delproveedor-start");
+    if (delProveedorStart) delProveedorStart.addEventListener("click", () => { confirmDeleteProveedorId = detailProveedorId; render(); });
+    const delProveedorYes = document.getElementById("cc-delproveedor-yes");
+    if (delProveedorYes) delProveedorYes.addEventListener("click", () => {
+      proveedores = proveedores.filter((x) => x.id !== detailProveedorId);
+      proveedorMovimientos = proveedorMovimientos.filter((m) => m.proveedorId !== detailProveedorId);
+      saveProveedores(); saveProveedorMov();
+      showProveedorDetail = false; confirmDeleteProveedorId = null; detailProveedorId = null;
+      showToast("Proveedor eliminado");
+      render();
+    });
+    const delProveedorNo = document.getElementById("cc-delproveedor-no");
+    if (delProveedorNo) delProveedorNo.addEventListener("click", () => { confirmDeleteProveedorId = null; render(); });
+
+    // ---- Configuraciones page events ----
+    const saveSettingsBtn = document.getElementById("cc-save-settings");
+    if (saveSettingsBtn) saveSettingsBtn.addEventListener("click", () => {
+      const businessVal = document.getElementById("cc-cfg-business").value.trim();
+      const ownerVal = document.getElementById("cc-cfg-owner").value.trim();
+      const currencyVal = document.getElementById("cc-cfg-currency").value.trim();
+      settings.businessName = businessVal || "Mi negocio";
+      settings.ownerName = ownerVal || "Propietario";
+      settings.currency = currencyVal || "$";
+      saveSettings();
+      showToast("Configuración guardada");
+      render();
+    });
+
+    const savePinBtn = document.getElementById("cc-save-pin");
+    if (savePinBtn) savePinBtn.addEventListener("click", () => {
+      const pinWasSet = !!settings.pin;
+      const newPin = document.getElementById("cc-sec-new").value.trim();
+      const confirmPin = document.getElementById("cc-sec-confirm").value.trim();
+      const currentPin = pinWasSet ? document.getElementById("cc-sec-current").value.trim() : "";
+      if (pinWasSet && currentPin !== settings.pin) { secError = "El PIN actual no coincide."; render(); return; }
+      if (!/^\d{4}$/.test(newPin)) { secError = "El PIN debe tener 4 dígitos."; render(); return; }
+      if (newPin !== confirmPin) { secError = "Los PIN no coinciden."; render(); return; }
+      settings.pin = newPin;
+      saveSettings();
+      secNewPin = ""; secConfirmPin = ""; secCurrentPin = ""; secError = "";
+      showToast(pinWasSet ? "PIN actualizado" : "Bloqueo activado");
+      render();
+    });
+
+    const removePinStart = document.getElementById("cc-remove-pin-start");
+    if (removePinStart) removePinStart.addEventListener("click", () => { showRemovePinConfirm = true; secError = ""; render(); });
+    const removePinNo = document.getElementById("cc-remove-pin-no");
+    if (removePinNo) removePinNo.addEventListener("click", () => { showRemovePinConfirm = false; secError = ""; render(); });
+    const removePinYes = document.getElementById("cc-remove-pin-yes");
+    if (removePinYes) removePinYes.addEventListener("click", () => {
+      const val = document.getElementById("cc-remove-pin-input").value.trim();
+      if (val !== settings.pin) { secError = "PIN incorrecto."; render(); return; }
+      settings.pin = null;
+      saveSettings();
+      showRemovePinConfirm = false; secError = "";
+      showToast("Bloqueo desactivado");
+      render();
+    });
+
+    const exportBackupBtn = document.getElementById("cc-export-backup");
+    if (exportBackupBtn) exportBackupBtn.addEventListener("click", async () => {
+      try {
+        const result = await downloadJSON({
+          exportado: new Date().toISOString(),
+          movimientos, productos, ventasDetalle,
+          clientes, clienteMovimientos,
+          proveedores, proveedorMovimientos,
+          settings,
+        }, "respaldo_control.json");
+        showToast(result && result.status === "delivered" ? "Respaldo enviado" : "Respaldo descargado");
+      } catch (err) {
+        showToast(downloadErrorMessage(err));
+      }
+    });
+
+    const resetAllStart = document.getElementById("cc-reset-all-start");
+    if (resetAllStart) resetAllStart.addEventListener("click", () => { confirmResetAll = true; render(); });
+    const resetAllNo = document.getElementById("cc-reset-all-no");
+    if (resetAllNo) resetAllNo.addEventListener("click", () => { confirmResetAll = false; render(); });
+    const resetAllYes = document.getElementById("cc-reset-all-yes");
+    if (resetAllYes) resetAllYes.addEventListener("click", async () => {
+      await resetAllData();
+      confirmResetAll = false;
+      cart = {}; tab = "ingreso"; page = "balance";
+      showToast("Todos los datos fueron eliminados");
+      render();
+    });
+
+    // ---- Ayuda page events ----
+    root.querySelectorAll("[data-faq]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.getAttribute("data-faq");
+        expandedHelpId = expandedHelpId === id ? null : id;
+        render();
+      });
+    });
+  }
+
+  loadData();
+  loadProducts();
+  loadVentasDetalle();
+  loadClientes();
+  loadClienteMov();
+  loadProveedores();
+  loadProveedorMov();
+  loadSettings();
+})();
+</script>
+
+</body>
+</html>
