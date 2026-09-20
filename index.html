@@ -157,7 +157,7 @@
   .cc-search { width: 100%; border: 1px solid var(--border); background: var(--card); border-radius: 10px; padding: 10px 12px 10px 32px; font-size: 13px; font: inherit; color: var(--navy); }
   .cc-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--navySoft); font-size: 13px; }
   .cc-cat-filter-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
-  .cc-cat-chip { border-radius: 999px; padding: 6px 12px; font-size: 11.5px; font-weight: 600; border: 1px solid var(--border); background: var(--card); color: var(--navySoft); cursor: pointer; font: inherit; }
+  .cc-cat-chip { border-radius: 999px; padding: 6px 12px; font-size: 11.5px; font-weight: 600; border: 1px solid var(--border); background: var(--card); color: var(--navySoft); cursor: pointer; font: inherit; white-space: nowrap; flex: none; }
   .cc-cat-chip.active { background: var(--navy); color: #fff; border-color: transparent; }
 
   .cc-stats { display: flex; gap: 8px; margin-bottom: 16px; }
@@ -224,7 +224,7 @@
   }
   .cc-input.amount { font-size: 18px; font-weight: 800; }
   .cc-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-  .cc-chip { border-radius: 999px; padding: 6px 13px; font-size: 11.5px; font-weight: 600; border: 1px solid var(--border); background: var(--card); color: var(--navySoft); cursor: pointer; font: inherit; }
+  .cc-chip { border-radius: 999px; padding: 6px 13px; font-size: 11.5px; font-weight: 600; border: 1px solid var(--border); background: var(--card); color: var(--navySoft); cursor: pointer; font: inherit; white-space: nowrap; flex: none; }
   .cc-chip.active { background: var(--navy); color: #fff; border-color: transparent; }
   .cc-error { color: var(--coralText); font-size: 12px; margin: 0 0 8px; font-weight: 600; }
   .cc-submit { width: 100%; border: none; color: #fff; background: var(--navy); border-radius: 999px; padding: 14px; font-size: 14px; font-weight: 800; cursor: pointer; margin-top: 4px; transition: transform .12s ease, opacity .12s ease; }
@@ -2902,3 +2902,4 @@
 
 </body>
 </html>
+
