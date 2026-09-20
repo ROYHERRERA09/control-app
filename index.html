@@ -223,7 +223,8 @@
     border-radius: 10px; padding: 11px 13px; margin-bottom: 14px; font-size: 13.5px; font: inherit;
   }
   .cc-input.amount { font-size: 18px; font-weight: 800; }
-  .cc-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+  .cc-chips { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 8px; margin-bottom: 10px; padding-bottom: 2px; scrollbar-width: none; }
+  .cc-chips::-webkit-scrollbar { display: none; }
   .cc-chip { border-radius: 999px; padding: 6px 13px; font-size: 11.5px; font-weight: 600; border: 1px solid var(--border); background: var(--card); color: var(--navySoft); cursor: pointer; font: inherit; white-space: nowrap; flex: none; }
   .cc-chip.active { background: var(--navy); color: #fff; border-color: transparent; }
   .cc-error { color: var(--coralText); font-size: 12px; margin: 0 0 8px; font-weight: 600; }
@@ -2902,4 +2903,3 @@
 
 </body>
 </html>
-
