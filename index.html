@@ -12,6 +12,9 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Control" />
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <style>
   :root { box-sizing: border-box; }
   html, body {
@@ -334,16 +337,42 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 </style>
 <script>
 (function () {
-  // Persistent storage: uses the browser's own localStorage so data is saved
-  // on this device whether the app runs inside Claude or as an installed page.
+  // ---- Firebase: cloud sync so your data follows you across devices ----
+  const firebaseConfig = {
+    apiKey: "AIzaSyB2SFZ0TN25TG3shqjbiJw-R0B-wEAm9i0",
+    authDomain: "control-app-f3cef.firebaseapp.com",
+    projectId: "control-app-f3cef",
+    storageBucket: "control-app-f3cef.firebasestorage.app",
+    messagingSenderId: "379869219257",
+    appId: "1:379869219257:web:a491258f6544b222e6ce68",
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  db.enablePersistence({ synchronizeTabs: true }).catch(() => {
+    // Persistence isn't available in this browser/context (e.g. private mode); the app still works online.
+  });
+
+  let authUser = null;
+  let authLoading = true;
+  let authMode = "login"; // "login" | "signup"
+  let authEmail = "";
+  let authPassword = "";
+  let authError = "";
+  let authBusy = false;
+
+  // Storage backed by Firestore, scoped to the signed-in user, so the exact
+  // same get/set calls the rest of the app already uses now sync to the cloud.
   const storage = {
     async get(key) {
-      const v = localStorage.getItem(key);
-      if (v === null || v === undefined) throw new Error("not found");
-      return { key, value: v, shared: false };
+      if (!authUser) throw new Error("not authenticated");
+      const doc = await db.collection("users").doc(authUser.uid).collection("data").doc(key).get();
+      if (!doc.exists) throw new Error("not found");
+      return { key, value: doc.data().value, shared: false };
     },
     async set(key, value) {
-      localStorage.setItem(key, value);
+      if (!authUser) throw new Error("not authenticated");
+      await db.collection("users").doc(authUser.uid).collection("data").doc(key).set({ value });
       return { key, value, shared: false };
     },
   };
@@ -1471,6 +1500,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
     return `
       <div class="cc-card">
+        <p class="cc-card-label">Tu cuenta</p>
+        <p style="font-size:12.5px;color:var(--navySoft);margin:0 0 14px;">Conectado como <b style="color:var(--navy);">${esc(authUser ? authUser.email : "")}</b>. Tus datos se sincronizan automáticamente entre dispositivos.</p>
+        <button class="cc-btn-outline" id="cc-account-signout" style="width:100%;">Cerrar sesión de esta cuenta</button>
+      </div>
+
+      <div class="cc-card">
         <p class="cc-card-label">Perfil del negocio</p>
         <label class="cc-label">Nombre del negocio</label>
         <input class="cc-input" type="text" id="cc-cfg-business" value="${esc(cfgBusinessName)}" placeholder="Mi negocio" />
@@ -1793,8 +1828,100 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     `;
   }
 
+  function renderAuthScreen() {
+    const isSignup = authMode === "signup";
+    return `
+      <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;">
+        <div class="cc-logo" style="width:52px;height:52px;font-size:24px;margin-bottom:16px;">C</div>
+        <h2 style="font-size:19px;font-weight:800;color:var(--navy);margin:0 0 4px;">Control</h2>
+        <p style="font-size:12.5px;color:var(--navySoft);margin:0 0 22px;">${isSignup ? "Crea tu cuenta para guardar tus datos en la nube" : "Inicia sesión para ver tus datos en cualquier dispositivo"}</p>
+        <div style="width:100%;max-width:320px;text-align:left;">
+          <label class="cc-label">Correo</label>
+          <input class="cc-input" type="email" id="cc-auth-email" placeholder="tucorreo@ejemplo.com" value="${esc(authEmail)}" />
+          <label class="cc-label">Contraseña</label>
+          <input class="cc-input" type="password" id="cc-auth-password" placeholder="Mínimo 6 caracteres" value="${esc(authPassword)}" style="margin-bottom:8px;" />
+          ${authError ? `<p class="cc-error">${esc(authError)}</p>` : ""}
+          <button class="cc-submit" id="cc-auth-submit" ${authBusy ? "disabled" : ""}>${authBusy ? "Un momento…" : isSignup ? "Crear cuenta" : "Iniciar sesión"}</button>
+          <button class="cc-clear-link" id="cc-auth-toggle" style="display:block;margin:16px auto 0;text-align:center;">${isSignup ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Créala"}</button>
+          ${!isSignup ? `<button class="cc-clear-link" id="cc-auth-reset" style="display:block;margin:10px auto 0;text-align:center;">¿Olvidaste tu contraseña?</button>` : ""}
+        </div>
+      </div>`;
+  }
+  function wireAuthEvents() {
+    const submitBtn = document.getElementById("cc-auth-submit");
+    if (submitBtn) submitBtn.addEventListener("click", async () => {
+      const email = document.getElementById("cc-auth-email").value.trim();
+      const password = document.getElementById("cc-auth-password").value;
+      if (!email || !password) { authError = "Ingresa tu correo y contraseña."; render(); return; }
+      authBusy = true; authError = ""; render();
+      try {
+        if (authMode === "signup") await auth.createUserWithEmailAndPassword(email, password);
+        else await auth.signInWithEmailAndPassword(email, password);
+      } catch (err) {
+        authBusy = false;
+        authError = authFirebaseErrorMessage(err);
+        authEmail = email; authPassword = password;
+        render();
+      }
+    });
+    const toggleBtn = document.getElementById("cc-auth-toggle");
+    if (toggleBtn) toggleBtn.addEventListener("click", () => {
+      authMode = authMode === "signup" ? "login" : "signup";
+      authError = "";
+      render();
+    });
+    const resetBtn = document.getElementById("cc-auth-reset");
+    if (resetBtn) resetBtn.addEventListener("click", async () => {
+      const email = document.getElementById("cc-auth-email").value.trim();
+      if (!email) { authError = "Escribe tu correo arriba primero."; render(); return; }
+      try {
+        await auth.sendPasswordResetEmail(email);
+        authError = "";
+        showToastPreAuth("Te enviamos un correo para restablecer tu contraseña");
+      } catch (err) {
+        authError = authFirebaseErrorMessage(err);
+        render();
+      }
+    });
+    const emailInput = document.getElementById("cc-auth-email");
+    if (emailInput) emailInput.addEventListener("input", () => { authEmail = emailInput.value; });
+    const passInput = document.getElementById("cc-auth-password");
+    if (passInput) passInput.addEventListener("input", () => { authPassword = passInput.value; });
+  }
+  function authFirebaseErrorMessage(err) {
+    const code = err && err.code;
+    const map = {
+      "auth/invalid-email": "Ese correo no es válido.",
+      "auth/user-not-found": "No existe una cuenta con ese correo.",
+      "auth/wrong-password": "Contraseña incorrecta.",
+      "auth/email-already-in-use": "Ya existe una cuenta con ese correo. Inicia sesión.",
+      "auth/weak-password": "La contraseña debe tener al menos 6 caracteres.",
+      "auth/invalid-credential": "Correo o contraseña incorrectos.",
+      "auth/too-many-requests": "Demasiados intentos. Espera un momento.",
+      "auth/network-request-failed": "No hay conexión a internet.",
+    };
+    return map[code] || "Ocurrió un error. Intenta de nuevo.";
+  }
+  function showToastPreAuth(msg) {
+    const root = document.getElementById("cc-root");
+    const t = document.createElement("div");
+    t.className = "cc-toast";
+    t.textContent = msg;
+    root.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+  }
+
   function render() {
     const root = document.getElementById("cc-root");
+    if (authLoading) {
+      root.innerHTML = '<div class="cc-loading">Cargando…</div>';
+      return;
+    }
+    if (!authUser) {
+      root.innerHTML = renderAuthScreen();
+      wireAuthEvents();
+      return;
+    }
     if (!loaded || !productosLoaded || !ventasDetalleLoaded || !clientesLoaded || !clienteMovLoaded || !proveedoresLoaded || !proveedorMovLoaded || !settingsLoaded) {
       root.innerHTML = '<div class="cc-loading">Cargando tu caja…</div>';
       return;
@@ -2829,6 +2956,17 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     if (delProveedorNo) delProveedorNo.addEventListener("click", () => { confirmDeleteProveedorId = null; render(); });
 
     // ---- Configuraciones page events ----
+    const accountSignoutBtn = document.getElementById("cc-account-signout");
+    if (accountSignoutBtn) accountSignoutBtn.addEventListener("click", () => {
+      appStarted = false;
+      loaded = productosLoaded = ventasDetalleLoaded = clientesLoaded = clienteMovLoaded = proveedoresLoaded = proveedorMovLoaded = settingsLoaded = false;
+      movimientos = []; productos = []; ventasDetalle = []; clientes = []; clienteMovimientos = [];
+      proveedores = []; proveedorMovimientos = []; settings = { businessName: "Mi negocio", ownerName: "Propietario", currency: "$", pin: null };
+      page = "home"; sessionLocked = false;
+      authMode = "login"; authEmail = ""; authPassword = ""; authError = "";
+      auth.signOut();
+    });
+
     const saveSettingsBtn = document.getElementById("cc-save-settings");
     if (saveSettingsBtn) saveSettingsBtn.addEventListener("click", () => {
       const businessVal = document.getElementById("cc-cfg-business").value.trim();
@@ -2912,22 +3050,35 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     });
   }
 
-  loadData();
-  loadProducts();
-  loadVentasDetalle();
-  loadClientes();
-  loadClienteMov();
-  loadProveedores();
-  loadProveedorMov();
-  loadSettings();
+  let appStarted = false;
+  function startApp() {
+    if (appStarted) return;
+    appStarted = true;
+    loadData();
+    loadProducts();
+    loadVentasDetalle();
+    loadClientes();
+    loadClienteMov();
+    loadProveedores();
+    loadProveedorMov();
+    loadSettings();
+  }
+
+  auth.onAuthStateChanged((user) => {
+    authUser = user;
+    authLoading = false;
+    if (user) {
+      startApp();
+    } else {
+      render();
+    }
+  });
 })();
 </script>
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("sw.js").catch(() => {
-        // Offline caching just won't be available here (e.g. previewed inside Claude); the app still works online.
-      });
+      navigator.serviceWorker.register("sw.js").catch(() => {});
     });
   }
 </script>
