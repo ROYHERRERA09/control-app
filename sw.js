@@ -1,7 +1,5 @@
-const CACHE_NAME = "control-cache-v1";
+const CACHE_NAME = "control-cache-v2";
 const ASSETS = [
-  "./",
-  "./index.html",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
@@ -22,10 +20,26 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Cache-first for our own files, so the app opens instantly and works offline.
-// Anything else (if ever added) falls back to the network.
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  const isPage = event.request.mode === "navigate" || event.request.url.endsWith("/") || event.request.url.endsWith("index.html");
+
+  if (isPage) {
+    // Network-first for the app itself, so updates show up right away.
+    // Falls back to the cached copy only when there's no connection.
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // Cache-first for static assets (icons, manifest) that rarely change.
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
