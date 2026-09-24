@@ -560,8 +560,13 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   function startOfYear(d) { const x = startOfDay(d); x.setMonth(0, 1); return x; }
   function money(n) {
     const sign = n < 0 ? "-" : "";
-    const v = Math.abs(Math.round(n));
-    return sign + settings.currency + v.toLocaleString("es-CO");
+    const v = Math.abs(n);
+    const hasDecimals = Math.round(v * 100) % 100 !== 0;
+    const formatted = v.toLocaleString("es-CO", {
+      minimumFractionDigits: hasDecimals ? 2 : 0,
+      maximumFractionDigits: 2,
+    });
+    return sign + settings.currency + formatted;
   }
   function esc(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
