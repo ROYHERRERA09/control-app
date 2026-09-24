@@ -118,41 +118,34 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   .cc-bottomnav-icon.active-dot { position: relative; }
 
   /* ---- Inicio (home) page ---- */
-  .cc-home-hero { background: var(--card); border-radius: 18px; padding: 18px; margin-bottom: 16px; box-shadow: 0 2px 10px rgba(22,33,62,0.06); }
-  .cc-home-hero-top { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 2px; }
-  .cc-home-hero-main { min-width: 0; flex: 1 1 auto; }
-  .cc-home-hero-label { font-size: 13px; color: var(--navySoft); font-weight: 600; margin: 0 0 4px; }
-  .cc-home-hero-amount { font-size: 28px; font-weight: 800; color: var(--navy); margin: 0; font-variant-numeric: tabular-nums; word-break: break-word; line-height: 1.15; }
-  .cc-home-vs { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; white-space: nowrap; flex: none; }
-  .cc-home-vs.up { background: var(--mintBg); color: var(--mintText); }
-  .cc-home-vs.down { background: var(--coralBg); color: var(--coralText); }
-  .cc-home-split { display: flex; border-top: 1px solid var(--border); margin-top: 14px; padding-top: 14px; gap: 10px; }
-  .cc-home-split-col { flex: 1; }
-  .cc-home-split-amount { font-size: 18px; font-weight: 800; margin: 0 0 2px; font-variant-numeric: tabular-nums; }
-  .cc-home-split-label { font-size: 11.5px; color: var(--navySoft); margin: 0; }
-  .cc-home-cta {
-    width: 100%; margin-top: 16px; background: var(--navy); color: #fff; border: none; border-radius: 999px;
-    padding: 14px; font-size: 14px; font-weight: 800; cursor: pointer; font: inherit;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    transition: transform .12s ease, opacity .12s ease;
+  .cc-quickgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 18px; }
+  .cc-quick-btn {
+    background: var(--card); border: none; border-radius: 14px; padding: 12px 2px 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    font-size: 10px; font-weight: 700; color: var(--navy); font: inherit; cursor: pointer;
+    box-shadow: 0 2px 10px rgba(22,33,62,0.06); transition: transform .12s ease;
   }
-  .cc-home-cta:active { transform: scale(0.98); opacity: .92; }
+  .cc-quick-btn:active { transform: scale(0.94); }
+  .cc-quick-btn-icon {
+    width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .cc-home-metrics-card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 10px rgba(22,33,62,0.06); }
+  .cc-home-metrics-row { display: flex; gap: 6px; }
+  .cc-home-metric { flex: 1; text-align: center; min-width: 0; }
+  .cc-home-metric-label { font-size: 10.5px; color: var(--navySoft); margin: 0 0 4px; font-weight: 700; }
+  .cc-home-metric-value { font-size: 15px; font-weight: 800; margin: 0; color: var(--navy); font-variant-numeric: tabular-nums; word-break: break-word; }
+  .cc-home-metric-value.mint { color: var(--mintText); }
+  .cc-home-metric-value.coral { color: var(--coralText); }
+  .cc-home-metric-sub { text-align: center; font-size: 11px; color: var(--navySoft); margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--border); }
+  .cc-home-metric-sub b { color: inherit; }
   .cc-home-section-title { font-size: 15px; font-weight: 800; color: var(--navy); margin: 0 0 12px; }
-  .cc-home-carousel { display: flex; gap: 6px; margin-bottom: 20px; }
-  .cc-home-card {
-    flex: 1 1 0; min-width: 0; background: var(--card); border-radius: 12px; padding: 10px 4px; text-align: center;
-    box-shadow: 0 2px 10px rgba(22,33,62,0.06); border: none; font: inherit; cursor: pointer;
-    transition: transform .12s ease;
-  }
-  .cc-home-card:active { transform: scale(0.95); }
-  .cc-home-card-icon { font-size: 21px; margin-bottom: 6px; }
-  .cc-home-card-label { font-size: 10px; font-weight: 700; color: var(--navy); line-height: 1.2; word-break: break-word; }
-  .cc-home-stats-row { display: flex; gap: 10px; }
-  .cc-home-stat-card { flex: 1; background: var(--bg); border-radius: 12px; padding: 12px; }
-  .cc-home-stat-title { font-size: 11px; color: var(--navySoft); font-weight: 700; margin: 0 0 8px; }
-  .cc-home-stat-value { font-size: 16px; font-weight: 800; color: var(--navy); margin: 0 0 4px; }
-  .cc-home-stat-sub { font-size: 10.5px; color: var(--navySoft); margin: 0; }
-  .cc-home-viewall { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; background: none; border: none; color: var(--navy); font-weight: 700; font-size: 12.5px; padding: 12px 0 0; cursor: pointer; font: inherit; }
+  .cc-home-pending-row { display: flex; gap: 10px; }
+  .cc-home-pending-col { flex: 1; background: var(--bg); border-radius: 12px; padding: 12px; text-align: center; }
+  .cc-home-pending-label { font-size: 10.5px; color: var(--navySoft); font-weight: 700; margin: 0 0 6px; }
+  .cc-home-pending-value { font-size: 15px; font-weight: 800; margin: 0; }
+  .cc-home-viewall { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; background: none; border: none; color: var(--navy); font-weight: 700; font-size: 12px; padding: 12px 0 0; cursor: pointer; font: inherit; }
+  .cc-home-recent-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .cc-home-recent-row:last-child { border-bottom: none; }
 
   /* ---- main ---- */
   .cc-wrap { max-width: 560px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(84px + env(safe-area-inset-bottom, 0px)); }
@@ -405,21 +398,21 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   ];
   const NAV_ITEMS = [
     { key: "home", label: "Inicio", icon: "🏠" },
-    { key: "balance", label: "Balance", icon: "📊" },
     { key: "vender", label: "Vender", icon: "🏷" },
-    { key: "estadisticas", label: "Estadísticas", icon: "📈" },
     { key: "inventario", label: "Inventario", icon: "📦" },
+    { key: "estadisticas", label: "Estadísticas", icon: "📈" },
+    { key: "balance", label: "Balance", icon: "📊" },
   ];
   const NAV_ITEMS2 = [
-    { key: "clientes", label: "Clientes", icon: "👤" },
     { key: "proveedores", label: "Proveedores", icon: "🚚" },
-    { key: "config", label: "Configuraciones", icon: "⚙" },
+    { key: "clientes", label: "Clientes", icon: "👤" },
     { key: "ayuda", label: "Ayuda", icon: "❓" },
+    { key: "config", label: "Configuraciones", icon: "⚙" },
   ];
   const BOTTOM_NAV = [
     { key: "home", label: "Inicio", icon: "🏠" },
+    { key: "vender", label: "Vender", icon: "🏷" },
     { key: "balance", label: "Balance", icon: "📊" },
-    { key: "deudas", label: "Deudas", icon: "💳" },
     { key: "inventario", label: "Inventario", icon: "📦" },
   ];
 
@@ -1708,83 +1701,79 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     const balanceHoy = ventasHoy - gastosHoy;
     const cambio = pctChange(ventasHoy, ventasAyer);
 
-    // month stats
-    const monthStart = startOfMonth(now);
-    const monthEnd = new Date(monthStart); monthEnd.setMonth(monthEnd.getMonth() + 1);
-    const prevMonthStart = new Date(monthStart); prevMonthStart.setMonth(prevMonthStart.getMonth() - 1);
-    const prevMonthEnd = monthStart;
+    const totalPorCobrar = clientes.reduce((sum, c) => sum + Math.max(0, clienteBalance(c.id)), 0);
+    const totalPorPagar = proveedores.reduce((sum, p) => sum + Math.max(0, proveedorBalance(p.id)), 0);
 
-    const gananciaMes = movimientos.filter((m) => inRange(m.date, monthStart, monthEnd) && (m.type === "ingreso" || m.type === "egreso"))
-      .reduce((a, m) => a + (m.type === "ingreso" ? m.amount : -m.amount), 0);
-    const gananciaMesPrev = movimientos.filter((m) => inRange(m.date, prevMonthStart, prevMonthEnd) && (m.type === "ingreso" || m.type === "egreso"))
-      .reduce((a, m) => a + (m.type === "ingreso" ? m.amount : -m.amount), 0);
-    const gananciaCambio = pctChange(gananciaMes, gananciaMesPrev);
+    const recientes = [...movimientos].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
 
-    const ventasDetalleMes = ventasDetalle.filter((v) => inRange(v.date, monthStart, monthEnd));
-    const byProd = {};
-    ventasDetalleMes.forEach((v) => {
-      if (!byProd[v.productId]) byProd[v.productId] = { name: v.name, revenue: 0 };
-      byProd[v.productId].revenue += v.subtotal;
-    });
-    const topProd = Object.values(byProd).sort((a, b) => b.revenue - a.revenue)[0];
-
-    const carouselItems = [
-      { key: "estadisticas", icon: "📈", label: "Estadísticas" },
-      { key: "inventario", icon: "📦", label: "Inventario" },
-      { key: "clientes", icon: "👤", label: "Clientes" },
-      { key: "proveedores", icon: "🚚", label: "Proveedores" },
-      { key: "vender", icon: "🏷", label: "Vender" },
+    const quickItems = [
+      { key: "vender", icon: "🏷", label: "Vender", bg: "var(--yellowSoft)", fg: "#8A6A00" },
+      { key: "balance", icon: "📊", label: "Balance", bg: "#EAF0FB", fg: "var(--navy)" },
+      { key: "inventario", icon: "📦", label: "Inventario", bg: "var(--mintBg)", fg: "var(--mintText)" },
+      { key: "deudas", icon: "💳", label: "Deudas", bg: "var(--coralBg)", fg: "var(--coralText)" },
     ];
 
+    const recentesHTML = recientes.length === 0
+      ? `<p style="font-size:12.5px;color:var(--navySoft);margin:4px 0;">Todavía no hay movimientos registrados.</p>`
+      : recientes.map((m) => {
+          const bc = badgeColors(m.type);
+          return `
+        <div class="cc-home-recent-row">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+            <div class="cc-badge" style="width:28px;height:28px;font-size:12px;background:${bc.bg};color:${bc.fg};">${bc.icon}</div>
+            <p style="font-size:13px;font-weight:600;color:var(--navy);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(m.category)}</p>
+          </div>
+          <span style="font-size:13px;font-weight:800;color:${bc.fg};flex:none;">${money(m.amount)}</span>
+        </div>`;
+        }).join("");
+
     return `
-      <div class="cc-home-hero">
-        <div class="cc-home-hero-top">
-          <div class="cc-home-hero-main">
-            <p class="cc-home-hero-label">Tu negocio hoy</p>
-            <p class="cc-home-hero-amount">${money(ventasHoy)}</p>
-          </div>
-          <span class="cc-home-vs ${cambio >= 0 ? "up" : "down"}">${cambio >= 0 ? "↑" : "↓"} ${Math.abs(cambio).toFixed(1)}%</span>
-        </div>
-        <p style="font-size:11px;color:var(--navySoft);margin:0;">Ventas hoy vs. ayer</p>
-
-        <div class="cc-home-split">
-          <div class="cc-home-split-col">
-            <p class="cc-home-split-amount" style="color:${balanceHoy < 0 ? "var(--coralText)" : "var(--mintText)"}">${money(balanceHoy)}</p>
-            <p class="cc-home-split-label">Balance</p>
-          </div>
-          <div class="cc-home-split-col">
-            <p class="cc-home-split-amount" style="color:var(--coralText)">${money(gastosHoy)}</p>
-            <p class="cc-home-split-label">Gastos hoy</p>
-          </div>
-        </div>
-
-        <button class="cc-home-cta" id="cc-home-registrar-venta">+ Registrar venta</button>
-      </div>
-
-      <p class="cc-home-section-title">Descubre todo lo que puedes hacer</p>
-      <div class="cc-home-carousel">
-        ${carouselItems.map((c) => `
-          <button class="cc-home-card" data-homenav="${c.key}">
-            <div class="cc-home-card-icon">${c.icon}</div>
-            <div class="cc-home-card-label">${esc(c.label)}</div>
+      <div class="cc-quickgrid">
+        ${quickItems.map((q) => `
+          <button class="cc-quick-btn" data-homenav="${q.key}">
+            <span class="cc-quick-btn-icon" style="background:${q.bg};color:${q.fg};">${q.icon}</span>
+            ${esc(q.label)}
           </button>`).join("")}
       </div>
 
-      <div class="cc-card" style="margin-bottom:24px;">
-        <p class="cc-card-label">📊 Estadísticas</p>
-        <div class="cc-home-stats-row">
-          <div class="cc-home-stat-card">
-            <p class="cc-home-stat-title">Producto estrella del mes</p>
-            <p class="cc-home-stat-value">${topProd ? esc(topProd.name) : "Sin datos"}</p>
-            <p class="cc-home-stat-sub">${topProd ? money(topProd.revenue) : money(0)}</p>
+      <div class="cc-home-metrics-card">
+        <p class="cc-card-label">Resumen de hoy</p>
+        <div class="cc-home-metrics-row">
+          <div class="cc-home-metric">
+            <p class="cc-home-metric-label">Ventas</p>
+            <p class="cc-home-metric-value mint">${money(ventasHoy)}</p>
           </div>
-          <div class="cc-home-stat-card">
-            <p class="cc-home-stat-title">Ganancias del mes</p>
-            <p class="cc-home-stat-value" style="color:${gananciaMes < 0 ? "var(--coralText)" : "var(--navy)"}">${money(gananciaMes)}</p>
-            <p class="cc-home-stat-sub" style="color:${gananciaCambio >= 0 ? "var(--mintText)" : "var(--coralText)"}">${gananciaCambio >= 0 ? "↑" : "↓"} ${Math.abs(gananciaCambio).toFixed(1)}% vs. mes anterior</p>
+          <div class="cc-home-metric">
+            <p class="cc-home-metric-label">Egresos</p>
+            <p class="cc-home-metric-value coral">${money(gastosHoy)}</p>
+          </div>
+          <div class="cc-home-metric">
+            <p class="cc-home-metric-label">Balance</p>
+            <p class="cc-home-metric-value" style="color:${balanceHoy < 0 ? "var(--coralText)" : "var(--navy)"}">${money(balanceHoy)}</p>
           </div>
         </div>
-        <button class="cc-home-viewall" id="cc-home-viewall-stats">👁 Ver todo →</button>
+        <p class="cc-home-metric-sub"><b style="color:${cambio >= 0 ? "var(--mintText)" : "var(--coralText)"}">${cambio >= 0 ? "↑" : "↓"} ${Math.abs(cambio).toFixed(1)}%</b> en ventas vs. ayer</p>
+      </div>
+
+      <div class="cc-card">
+        <p class="cc-card-label">Pendientes</p>
+        <div class="cc-home-pending-row">
+          <div class="cc-home-pending-col">
+            <p class="cc-home-pending-label">Por cobrar</p>
+            <p class="cc-home-pending-value" style="color:var(--coralText)">${money(totalPorCobrar)}</p>
+          </div>
+          <div class="cc-home-pending-col">
+            <p class="cc-home-pending-label">Por pagar</p>
+            <p class="cc-home-pending-value">${money(totalPorPagar)}</p>
+          </div>
+        </div>
+        <button class="cc-home-viewall" data-homenav="deudas">Ver detalle →</button>
+      </div>
+
+      <div class="cc-card" style="margin-bottom:24px;">
+        <p class="cc-card-label">Últimos movimientos</p>
+        ${recentesHTML}
+        <button class="cc-home-viewall" data-homenav="balance">Ver todo →</button>
       </div>
     `;
   }
@@ -2303,11 +2292,6 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     root.querySelectorAll("[data-homenav]").forEach((btn) => {
       btn.addEventListener("click", () => goToPage(btn.getAttribute("data-homenav")));
     });
-
-    const homeRegistrarVenta = document.getElementById("cc-home-registrar-venta");
-    if (homeRegistrarVenta) homeRegistrarVenta.addEventListener("click", () => goToPage("vender"));
-    const homeViewAllStats = document.getElementById("cc-home-viewall-stats");
-    if (homeViewAllStats) homeViewAllStats.addEventListener("click", () => goToPage("estadisticas"));
 
     const editProfileBtn = document.getElementById("cc-sb-edit-profile");
     if (editProfileBtn) editProfileBtn.addEventListener("click", () => {
