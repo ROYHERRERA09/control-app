@@ -170,7 +170,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     font-size: 12.5px; font-weight: 700; color: var(--navy); font: inherit; cursor: pointer;
   }
   .cc-select-chevron { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--navySoft); font-size: 10px; pointer-events: none; }
-  .cc-range-pill { flex: 1; min-width: 120px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 12.5px; font-weight: 600; color: var(--navySoft); display: flex; align-items: center; justify-content: center; }
+  .cc-range-pill { flex: 1; min-width: 120px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 12.5px; font-weight: 600; color: var(--navySoft); display: flex; align-items: center; justify-content: center; touch-action: pan-y; user-select: none; }
+  .cc-range-row { align-items: stretch; }
+  .cc-range-nav { flex: 0 0 auto; width: 34px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--navy); font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; font: inherit; }
+  .cc-range-nav:active { background: var(--yellowSoft); }
   .cc-search-wrap { position: relative; margin-bottom: 14px; }
   .cc-search { width: 100%; border: 1px solid var(--border); background: var(--card); border-radius: 10px; padding: 10px 12px 10px 32px; font-size: 13px; font: inherit; color: var(--navy); }
   .cc-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--navySoft); font-size: 13px; }
@@ -394,6 +397,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     { key: "day", label: "Diario" },
     { key: "week", label: "Semanal" },
     { key: "month", label: "Mensual" },
+    { key: "quarter", label: "Trimestre" },
     { key: "year", label: "Anual" },
   ];
   const NAV_ITEMS = [
@@ -461,6 +465,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   let statsPeriod = "week";
   let selectedYear = new Date().getFullYear();
   let selectedMonth = new Date().getMonth();
+  let selectedQuarter = Math.floor(new Date().getMonth() / 3);
   let selectedWeekDate = todayStr();
   let selectedDay = todayStr();
   let datePickerOpen = false;
@@ -546,6 +551,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     const d = new Date();
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
+  function dateToStr(d) {
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
   function toDate(dateStr) { return new Date(dateStr + "T12:00:00"); }
   function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
   function startOfWeek(d) { const x = startOfDay(d); const day = x.getDay(); const diff = (day === 0 ? -6 : 1) - day; x.setDate(x.getDate() + diff); return x; }
@@ -564,10 +572,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   function esc(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
+  function startOfQuarter(d) { const x = startOfDay(d); x.setMonth(Math.floor(x.getMonth() / 3) * 3, 1); return x; }
   function rangeFor(p, now) {
     if (p === "day") return [startOfDay(now), new Date(startOfDay(now).getTime() + 86400000)];
     if (p === "week") { const s = startOfWeek(now); return [s, new Date(s.getTime() + 7 * 86400000)]; }
     if (p === "month") { const s = startOfMonth(now); const e = new Date(s); e.setMonth(e.getMonth() + 1); return [s, e]; }
+    if (p === "quarter") { const s = startOfQuarter(now); const e = new Date(s); e.setMonth(e.getMonth() + 3); return [s, e]; }
     const s = startOfYear(now); const e = new Date(s); e.setFullYear(e.getFullYear() + 1); return [s, e];
   }
   function rangeLabel(p, now) {
@@ -612,6 +622,16 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         e.setMonth(e.getMonth() + 1);
         buckets.push({ start: s, end: e, label: s.toLocaleDateString("es-CO", { month: "short" }), current: i === 0 });
       }
+    } else if (p === "quarter") {
+      const curStart = startOfQuarter(now);
+      for (let i = -RANGE; i <= RANGE; i++) {
+        const s = new Date(curStart);
+        s.setMonth(s.getMonth() + i * 3);
+        const e = new Date(s);
+        e.setMonth(e.getMonth() + 3);
+        const qn = Math.floor(s.getMonth() / 3) + 1;
+        buckets.push({ start: s, end: e, label: "T" + qn + " " + String(s.getFullYear()).slice(2), current: i === 0 });
+      }
     } else {
       const curStart = startOfYear(now);
       for (let i = -RANGE; i <= RANGE; i++) {
@@ -636,7 +656,30 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       return "Semana: " + weekRangeLabel(s, e, false);
     }
     if (p === "month") return "Mes: " + now.toLocaleDateString("es-CO", { month: "long", year: "numeric" });
+    if (p === "quarter") { const qn = Math.floor(now.getMonth() / 3) + 1; return "Trimestre " + qn + ": " + now.getFullYear(); }
     return "Año: " + now.getFullYear();
+  }
+  function shiftPeriod(dir) {
+    if (period === "day") {
+      const d = toDate(selectedDay);
+      d.setDate(d.getDate() + dir);
+      selectedDay = dateToStr(d);
+    } else if (period === "week") {
+      const d = toDate(selectedWeekDate);
+      d.setDate(d.getDate() + dir * 7);
+      selectedWeekDate = dateToStr(d);
+    } else if (period === "month") {
+      let m = selectedMonth + dir, y = selectedYear;
+      if (m < 0) { m = 11; y -= 1; } else if (m > 11) { m = 0; y += 1; }
+      selectedMonth = m; selectedYear = y;
+    } else if (period === "quarter") {
+      let q = selectedQuarter + dir, y = selectedYear;
+      if (q < 0) { q = 3; y -= 1; } else if (q > 3) { q = 0; y += 1; }
+      selectedQuarter = q; selectedYear = y;
+    } else if (period === "year") {
+      selectedYear += dir;
+    }
+    render();
   }
 
   async function loadData() {
@@ -1927,6 +1970,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     }
     const now = new Date();
     const periodRef = period === "year" ? new Date(selectedYear, now.getMonth(), now.getDate())
+      : period === "quarter" ? new Date(selectedYear, selectedQuarter * 3, 1)
       : period === "month" ? new Date(selectedYear, selectedMonth, 1)
       : period === "week" ? toDate(selectedWeekDate)
       : period === "day" ? toDate(selectedDay)
@@ -1949,9 +1993,12 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
     const periodOptions = PERIODS.map((p) => `<option value="${p.key}" ${p.key === period ? "selected" : ""}>${p.label}</option>`).join("");
     const currentYearNow = now.getFullYear();
-    const yearOptions = Array.from({ length: 7 }, (_, i) => currentYearNow - 6 + i)
+    const yearRangeStart = Math.min(currentYearNow - 6, selectedYear - 1);
+    const yearRangeEnd = Math.max(currentYearNow, selectedYear + 1);
+    const yearOptions = Array.from({ length: yearRangeEnd - yearRangeStart + 1 }, (_, i) => yearRangeStart + i)
       .map((y) => `<option value="${y}" ${y === selectedYear ? "selected" : ""}>${y}</option>`).join("");
     const monthOptions = MONTH_NAMES.map((name, i) => `<option value="${i}" ${i === selectedMonth ? "selected" : ""}>${name}</option>`).join("");
+    const quarterOptions = [0, 1, 2, 3].map((q) => `<option value="${q}" ${q === selectedQuarter ? "selected" : ""}>Trimestre ${q + 1}</option>`).join("");
 
     const catForTab = CATS[tab];
     const catFilterHTML = showFilterPanel
@@ -2034,6 +2081,17 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           <span class="cc-select-chevron">▾</span>
         </div>
       </div>` : ""}
+      ${period === "quarter" ? `
+      <div class="cc-filter-row">
+        <div class="cc-select-wrap" style="flex:1.4;">
+          <select class="cc-select" id="cc-quarter">${quarterOptions}</select>
+          <span class="cc-select-chevron">▾</span>
+        </div>
+        <div class="cc-select-wrap">
+          <select class="cc-select" id="cc-year">${yearOptions}</select>
+          <span class="cc-select-chevron">▾</span>
+        </div>
+      </div>` : ""}
       ${period === "week" ? `
       <div class="cc-filter-row">
         <div class="cc-select-wrap" style="flex:none;width:100%;">
@@ -2046,8 +2104,10 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
           <button type="button" class="cc-date-trigger" id="cc-daydate">${formatDateDisplay(selectedDay)}<span class="cal-ic">📅</span></button>
         </div>
       </div>` : ""}
-      <div class="cc-filter-row">
-        <div class="cc-range-pill">📅 ${rangeLabel(period, periodRef)}</div>
+      <div class="cc-filter-row cc-range-row">
+        <button type="button" class="cc-range-nav" id="cc-range-prev" title="Anterior">‹</button>
+        <div class="cc-range-pill" id="cc-range-pill">📅 ${rangeLabel(period, periodRef)}</div>
+        <button type="button" class="cc-range-nav" id="cc-range-next" title="Siguiente">›</button>
       </div>
       ${catFilterHTML}
 
@@ -2368,6 +2428,29 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
     const monthSel = document.getElementById("cc-month");
     if (monthSel) monthSel.addEventListener("change", () => { selectedMonth = parseInt(monthSel.value, 10); render(); });
+
+    const quarterSel = document.getElementById("cc-quarter");
+    if (quarterSel) quarterSel.addEventListener("change", () => { selectedQuarter = parseInt(quarterSel.value, 10); render(); });
+
+    const rangePrevBtn = document.getElementById("cc-range-prev");
+    if (rangePrevBtn) rangePrevBtn.addEventListener("click", () => shiftPeriod(-1));
+    const rangeNextBtn = document.getElementById("cc-range-next");
+    if (rangeNextBtn) rangeNextBtn.addEventListener("click", () => shiftPeriod(1));
+    const rangePill = document.getElementById("cc-range-pill");
+    if (rangePill) {
+      let touchStartX = null, touchStartY = null;
+      rangePill.addEventListener("touchstart", (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+      }, { passive: true });
+      rangePill.addEventListener("touchend", (e) => {
+        if (touchStartX === null) return;
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        const dy = e.changedTouches[0].clientY - touchStartY;
+        touchStartX = null;
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) shiftPeriod(dx < 0 ? 1 : -1);
+      }, { passive: true });
+    }
 
     const searchInput = document.getElementById("cc-search");
     if (searchInput) searchInput.addEventListener("input", () => {
