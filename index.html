@@ -580,12 +580,21 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     if (p === "quarter") { const s = startOfQuarter(now); const e = new Date(s); e.setMonth(e.getMonth() + 3); return [s, e]; }
     const s = startOfYear(now); const e = new Date(s); e.setFullYear(e.getFullYear() + 1); return [s, e];
   }
+  const QUARTER_ORDINALS = ["1er", "2do", "3er", "4to"];
   function rangeLabel(p, now) {
     const [s, e] = rangeFor(p, now);
     const endIncl = new Date(e.getTime() - 86400000);
     const fmt = (d) => d.toLocaleDateString("es-CO", { day: "numeric", month: "short" });
     if (p === "day") return fmt(s);
     if (p === "year") return String(s.getFullYear());
+    if (p === "month") {
+      const monthName = s.toLocaleDateString("es-CO", { month: "long" });
+      return monthName.charAt(0).toUpperCase() + monthName.slice(1) + " " + s.getFullYear();
+    }
+    if (p === "quarter") {
+      const qn = Math.floor(s.getMonth() / 3);
+      return QUARTER_ORDINALS[qn] + " Trimestre " + s.getFullYear();
+    }
     return fmt(s) + " | " + fmt(endIncl);
   }
   function weekRangeLabel(s, endIncl, short) {
