@@ -2894,6 +2894,7 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
     root.querySelectorAll("[data-del]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-del");
+        if (!confirm("¿Eliminar este movimiento? Esta acción no se puede deshacer.")) return;
         movimientos = movimientos.filter((m) => m.id !== id);
         saveData(); render();
       });
