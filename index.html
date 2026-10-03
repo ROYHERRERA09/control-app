@@ -174,6 +174,9 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   .cc-range-row { align-items: stretch; }
   .cc-range-nav { flex: 0 0 auto; width: 34px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--navy); font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; cursor: pointer; font: inherit; }
   .cc-range-nav:active { background: var(--yellowSoft); }
+  .cc-seg-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .cc-seg-btn { flex: 1 1 auto; min-width: 58px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 9px 6px; font-size: 11.5px; font-weight: 700; color: var(--navySoft); font: inherit; cursor: pointer; text-align: center; }
+  .cc-seg-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
   .cc-search-wrap { position: relative; margin-bottom: 14px; }
   .cc-search { width: 100%; border: 1px solid var(--border); background: var(--card); border-radius: 10px; padding: 10px 12px 10px 32px; font-size: 13px; font: inherit; color: var(--navy); }
   .cc-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--navySoft); font-size: 13px; }
@@ -451,7 +454,6 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   let fDate = todayStr();
   let editingMovimientoId = null;
   let showExportDialog = false;
-  let exportStep = "choose"; // "choose" | "detail"
   let exportPeriod = "week";
   let exportDay = todayStr();
   let exportWeekDate = todayStr();
@@ -988,6 +990,151 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     const dl = await getDownloadsCapability();
     if (dl) return dl.save({ filename: "reporte_control.xlsx", data: arrayBuffer });
     return browserDownload("reporte_control.xlsx", arrayBuffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  }
+
+  // ---- Reporte mejorado (pantalla única de exportar) ----
+  function buildExportData() {
+    const refDate = exportPeriod === "day" ? toDate(exportDay)
+      : exportPeriod === "week" ? toDate(exportWeekDate)
+      : exportPeriod === "month" ? new Date(exportYear, exportMonth, 1)
+      : exportPeriod === "quarter" ? new Date(exportYear, exportQuarter * 3, 1)
+      : new Date(exportYear, 0, 1);
+    const [s, e] = rangeFor(exportPeriod, refDate);
+    const inRange = (m) => { const t = toDate(m.date).getTime(); return t >= s.getTime() && t < e.getTime(); };
+    const periodMovs = movimientos.filter(inRange);
+    const ingresos = periodMovs.filter((m) => m.type === "ingreso").reduce((a, m) => a + m.amount, 0);
+    const egresos = periodMovs.filter((m) => m.type === "egreso").reduce((a, m) => a + m.amount, 0);
+    const rows = periodMovs.filter((m) => m.type === tab).sort((a, b) => toDate(b.date) - toDate(a.date) || b.createdAt - a.createdAt);
+    const tabLabelsLocal = { ingreso: "Ingresos", egreso: "Egresos", por_cobrar: "Por cobrar", por_pagar: "Por pagar" };
+    const nowGen = new Date();
+    const meta = {
+      businessName: settings.businessName || "Mi negocio",
+      ownerName: settings.ownerName || "",
+      tabLabel: tabLabelsLocal[tab],
+      periodLabel: rangeLabel(exportPeriod, refDate),
+      generatedStr: nowGen.toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" }) + " · " + nowGen.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" }),
+      currency: settings.currency || "$",
+    };
+    return { rows, summary: { ingresos, egresos, balance: ingresos - egresos }, meta };
+  }
+
+  function buildMejoradoXLSX(rows, meta, summary) {
+    const typeLabelsEs = { ingreso: "Ingreso", egreso: "Egreso", por_cobrar: "Por cobrar", por_pagar: "Por pagar" };
+    const fmtDateDMY = (d) => { const [y, m, day] = d.split("-"); return `${day}-${m}-${y}`; };
+    const aoa = [];
+    aoa.push([meta.businessName]);
+    if (meta.ownerName) aoa.push([meta.ownerName]);
+    aoa.push([]);
+    aoa.push(["Período", meta.periodLabel]);
+    aoa.push(["Generado", meta.generatedStr]);
+    aoa.push(["Reporte de", meta.tabLabel]);
+    aoa.push([]);
+    aoa.push(["Ingresos del período", "Egresos del período", "Balance"]);
+    aoa.push([summary.ingresos, summary.egresos, summary.balance]);
+    aoa.push([]);
+    aoa.push(["Tipo", "Categoría", "Nota", "Medio de pago", "Fecha", "Valor"]);
+    rows.forEach((m) => aoa.push([typeLabelsEs[m.type] || m.type, m.category, m.note || "", m.medio || "", fmtDateDMY(m.date), m.amount]));
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [{ wch: 16 }, { wch: 18 }, { wch: 28 }, { wch: 14 }, { wch: 12 }, { wch: 12 }];
+    const merges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
+    if (meta.ownerName) merges.push({ s: { r: 1, c: 0 }, e: { r: 1, c: 5 } });
+    ws["!merges"] = merges;
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+    return wb;
+  }
+
+  async function saveWorkbook(wb, filename) {
+    const arrayBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const dl = await getDownloadsCapability();
+    if (dl) return dl.save({ filename, data: arrayBuffer });
+    return browserDownload(filename, arrayBuffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  }
+
+  function buildPrintableReportHTML(rows, meta, summary) {
+    const fmtDateDMY = (d) => { const [y, m, day] = d.split("-"); return `${day}/${m}/${y}`; };
+    const money2 = (n) => {
+      const v = Math.abs(n);
+      const hasDecimals = Math.round(v * 100) % 100 !== 0;
+      return meta.currency + v.toLocaleString("es-CO", { minimumFractionDigits: hasDecimals ? 2 : 0, maximumFractionDigits: 2 });
+    };
+    const rowsHTML = rows.length === 0
+      ? `<tr><td colspan="5" style="text-align:center;color:#6B7A99;padding:28px;">No hay movimientos en este período.</td></tr>`
+      : rows.map((m, i) => `
+        <tr style="background:${i % 2 === 0 ? "#fff" : "#F5F6F8"};">
+          <td>${fmtDateDMY(m.date)}</td>
+          <td>${esc(m.category)}</td>
+          <td>${esc(m.note || "")}</td>
+          <td>${esc(m.medio || "")}</td>
+          <td style="text-align:right;font-weight:700;">${money2(m.amount)}</td>
+        </tr>`).join("");
+    const total = rows.reduce((a, m) => a + m.amount, 0);
+    return `<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Reporte - ${esc(meta.businessName)}</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin:0; padding: 28px 20px; background: #fff; color: #16213E; }
+  .report-wrap { max-width: 760px; margin: 0 auto; }
+  .report-head { display:flex; flex-wrap:wrap; gap: 14px; justify-content:space-between; align-items:flex-start; border-bottom: 3px solid #16213E; padding-bottom: 18px; margin-bottom: 22px; }
+  .biz-name { font-size: 22px; font-weight: 800; margin: 0; }
+  .biz-owner { font-size: 12.5px; color: #6B7A99; margin: 4px 0 0; }
+  .report-meta { text-align: right; font-size: 11.5px; color: #6B7A99; line-height: 1.7; }
+  .report-meta b { color: #16213E; }
+  .summary-row { display:flex; flex-wrap:wrap; gap: 12px; margin-bottom: 26px; }
+  .summary-card { flex:1 1 140px; border-radius: 14px; padding: 16px; }
+  .summary-card .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; opacity: .75; margin:0 0 6px; }
+  .summary-card .value { font-size: 20px; font-weight: 800; margin:0; }
+  .sc-ing { background: #E1F5EC; color: #1E9E6B; }
+  .sc-eg { background: #FDE6E3; color: #E0473A; }
+  .sc-bal { background: #16213E; color: #fff; }
+  table { width:100%; border-collapse: collapse; font-size: 12.5px; }
+  thead th { text-align:left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .03em; color: #6B7A99; border-bottom: 2px solid #E5E8EE; padding: 8px 10px; }
+  tbody td { padding: 9px 10px; border-bottom: 1px solid #E5E8EE; }
+  tfoot td { padding: 12px 10px; font-weight: 800; border-top: 2px solid #16213E; }
+  .toolbar { display:flex; justify-content:flex-end; gap:10px; margin-bottom: 18px; }
+  .btn-print { background: #16213E; color:#fff; border:none; border-radius: 10px; padding: 10px 18px; font-size: 13px; font-weight:700; cursor:pointer; }
+  @media print { .toolbar { display:none; } body { padding: 0; } }
+</style></head>
+<body>
+  <div class="report-wrap">
+    <div class="toolbar">
+      <button class="btn-print" onclick="window.print()">🖨 Imprimir / Guardar como PDF</button>
+    </div>
+    <div class="report-head">
+      <div>
+        <p class="biz-name">${esc(meta.businessName)}</p>
+        ${meta.ownerName ? `<p class="biz-owner">${esc(meta.ownerName)}</p>` : ""}
+      </div>
+      <div class="report-meta">
+        <div><b>Período:</b> ${esc(meta.periodLabel)}</div>
+        <div><b>Reporte de:</b> ${esc(meta.tabLabel)}</div>
+        <div>Generado: ${esc(meta.generatedStr)}</div>
+      </div>
+    </div>
+    <div class="summary-row">
+      <div class="summary-card sc-ing"><p class="label">Ingresos</p><p class="value">${money2(summary.ingresos)}</p></div>
+      <div class="summary-card sc-eg"><p class="label">Egresos</p><p class="value">${money2(summary.egresos)}</p></div>
+      <div class="summary-card sc-bal"><p class="label">Balance</p><p class="value">${summary.balance < 0 ? "-" : ""}${money2(summary.balance)}</p></div>
+    </div>
+    <table>
+      <thead><tr><th>Fecha</th><th>Categoría</th><th>Nota</th><th>Medio</th><th style="text-align:right;">Valor</th></tr></thead>
+      <tbody>${rowsHTML}</tbody>
+      <tfoot><tr><td colspan="4">Total ${esc(meta.tabLabel.toLowerCase())}</td><td style="text-align:right;">${money2(total)}</td></tr></tfoot>
+    </table>
+  </div>
+</body></html>`;
+  }
+
+  function openPrintableReport(html) {
+    try {
+      const blob = new Blob([html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const win = window.open(url, "_blank");
+      if (!win) { showToast("Habilita las ventanas emergentes para ver el reporte"); }
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      showToast("No se pudo abrir el reporte");
+    }
   }
 
   // Importa reportes exportados en Excel (formato de hoja con una fila de
@@ -1740,12 +1887,16 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     if (target === "movdate") return fDate;
     if (target === "weekdate") return selectedWeekDate;
     if (target === "daydate") return selectedDay;
+    if (target === "exportday") return exportDay;
+    if (target === "exportweekdate") return exportWeekDate;
     return todayStr();
   }
   function setSelectedValueForTarget(target, dateStr) {
     if (target === "movdate") fDate = dateStr;
     else if (target === "weekdate") selectedWeekDate = dateStr;
     else if (target === "daydate") selectedDay = dateStr;
+    else if (target === "exportday") exportDay = dateStr;
+    else if (target === "exportweekdate") exportWeekDate = dateStr;
   }
   function openDatePicker(target) {
     datePickerTarget = target;
@@ -1844,19 +1995,49 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
   function renderExportDialogSheet() {
     const tabLabels = { ingreso: "Ingresos", egreso: "Egresos", por_cobrar: "Por cobrar", por_pagar: "Por pagar" };
-    const exportLabels = { day: "Diario (el día que estás viendo)", week: "Semanal (la semana que estás viendo)", month: "Mensual (el mes que estás viendo)", quarter: "Trimestral (el trimestre que estás viendo)", year: "Anual (el año que estás viendo)" };
-    const btnsHTML = PERIODS.map((p) => `<button class="cc-btn-outline" data-exportperiod="${p.key}" style="width:100%;">${esc(exportLabels[p.key] || p.label)}</button>`).join("");
+
+    const tabsHTML = PERIODS.map((p) => `<button class="cc-seg-btn${p.key === exportPeriod ? " active" : ""}" data-exportperiodtab="${p.key}">${esc(p.label)}</button>`).join("");
+
+    const yearOpts = Array.from({ length: 13 }, (_, i) => new Date().getFullYear() - 10 + i)
+      .map((y) => `<option value="${y}" ${y === exportYear ? "selected" : ""}>${y}</option>`).join("");
+    const monthOpts = MONTH_NAMES.map((name, i) => `<option value="${i}" ${i === exportMonth ? "selected" : ""}>${name}</option>`).join("");
+    const quarterOpts = [0, 1, 2, 3].map((q) => `<option value="${q}" ${q === exportQuarter ? "selected" : ""}>Trimestre ${q + 1}</option>`).join("");
+
+    let detailHTML = "";
+    if (exportPeriod === "day") {
+      detailHTML = `<button type="button" class="cc-date-trigger" id="cc-export-day" style="width:100%;">${formatDateDisplay(exportDay)}<span class="cal-ic">📅</span></button>`;
+    } else if (exportPeriod === "week") {
+      detailHTML = `
+        <p style="font-size:11px;color:var(--navySoft);margin:0 0 6px;">Elige cualquier día de la semana que quieras</p>
+        <button type="button" class="cc-date-trigger" id="cc-export-weekdate" style="width:100%;">${formatDateDisplay(exportWeekDate)}<span class="cal-ic">📅</span></button>`;
+    } else if (exportPeriod === "month") {
+      detailHTML = `
+        <div style="display:flex;gap:8px;">
+          <div class="cc-select-wrap" style="flex:1.4;"><select class="cc-select" id="cc-export-month">${monthOpts}</select><span class="cc-select-chevron">▾</span></div>
+          <div class="cc-select-wrap"><select class="cc-select" id="cc-export-year">${yearOpts}</select><span class="cc-select-chevron">▾</span></div>
+        </div>`;
+    } else if (exportPeriod === "quarter") {
+      detailHTML = `
+        <div style="display:flex;gap:8px;">
+          <div class="cc-select-wrap" style="flex:1.4;"><select class="cc-select" id="cc-export-quarter">${quarterOpts}</select><span class="cc-select-chevron">▾</span></div>
+          <div class="cc-select-wrap"><select class="cc-select" id="cc-export-year">${yearOpts}</select><span class="cc-select-chevron">▾</span></div>
+        </div>`;
+    } else {
+      detailHTML = `
+        <div class="cc-select-wrap"><select class="cc-select" id="cc-export-year">${yearOpts}</select><span class="cc-select-chevron">▾</span></div>`;
+    }
+
     return `
       <div class="cc-overlay${showExportDialog ? " open" : ""}" id="cc-export-overlay"></div>
       <div class="cc-sheet${showExportDialog ? " open" : ""}">
         <div class="cc-sheet-head">
-          <h3 class="cc-sheet-title">Exportar reporte</h3>
+          <h3 class="cc-sheet-title">Reporte de ${tabLabels[tab].toLowerCase()}</h3>
           <button class="cc-x" id="cc-export-close">✕</button>
         </div>
-        <p style="font-size:12.5px;color:var(--navySoft);margin:0 0 16px;">Se exportarán tus movimientos de <b>${tabLabels[tab]}</b>. ¿De qué período?</p>
-        <div style="display:flex;flex-direction:column;gap:8px;">
-          ${btnsHTML}
-        </div>
+        <div class="cc-seg-row">${tabsHTML}</div>
+        <div style="margin:12px 0 18px;">${detailHTML}</div>
+        <button class="cc-submit" id="cc-export-view" style="margin-top:0;">👁 Ver reporte para imprimir / PDF</button>
+        <button class="cc-btn-outline" id="cc-export-excel" style="width:100%;margin-top:10px;">⬇ Descargar en Excel</button>
       </div>`;
   }
 
@@ -2520,29 +2701,69 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     });
 
     const downloadBtn = document.getElementById("cc-download-btn");
-    if (downloadBtn) downloadBtn.addEventListener("click", () => { showExportDialog = true; render(); });
+    if (downloadBtn) downloadBtn.addEventListener("click", () => {
+      showExportDialog = true;
+      // Al abrir, parte del período que ya se está viendo en Balance.
+      exportPeriod = period;
+      const ref = currentPeriodRef;
+      exportDay = dateToStr(ref); exportWeekDate = dateToStr(ref);
+      exportMonth = ref.getMonth(); exportQuarter = Math.floor(ref.getMonth() / 3); exportYear = ref.getFullYear();
+      render();
+    });
 
     const exportOverlay = document.getElementById("cc-export-overlay");
     if (exportOverlay) exportOverlay.addEventListener("click", () => { showExportDialog = false; render(); });
     const exportClose = document.getElementById("cc-export-close");
     if (exportClose) exportClose.addEventListener("click", () => { showExportDialog = false; render(); });
 
-    root.querySelectorAll("[data-exportperiod]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const chosenPeriod = btn.getAttribute("data-exportperiod");
-        const refDate = chosenPeriod === period ? currentPeriodRef : new Date();
-        const [s, e] = rangeFor(chosenPeriod, refDate);
-        const rows = movimientos.filter((m) => { const t = toDate(m.date).getTime(); return t >= s.getTime() && t < e.getTime() && m.type === tab; });
-        showExportDialog = false;
+    root.querySelectorAll("[data-exportperiodtab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const chosen = btn.getAttribute("data-exportperiodtab");
+        exportPeriod = chosen;
+        const ref = chosen === period ? currentPeriodRef : new Date();
+        if (chosen === "day") exportDay = dateToStr(ref);
+        else if (chosen === "week") exportWeekDate = dateToStr(ref);
+        else if (chosen === "month") { exportMonth = ref.getMonth(); exportYear = ref.getFullYear(); }
+        else if (chosen === "quarter") { exportQuarter = Math.floor(ref.getMonth() / 3); exportYear = ref.getFullYear(); }
+        else { exportYear = ref.getFullYear(); }
         render();
-        if (rows.length === 0) { showToast("No hay datos para exportar en ese período"); return; }
-        try {
-          const result = await saveXLSX(rows);
-          showToast(result && result.status === "delivered" ? "Reporte enviado" : "Reporte descargado");
-        } catch (err) {
-          showToast(downloadErrorMessage(err));
-        }
       });
+    });
+
+    const exportDayBtn = document.getElementById("cc-export-day");
+    if (exportDayBtn) exportDayBtn.addEventListener("click", () => { openDatePicker("exportday"); render(); });
+    const exportWeekBtn = document.getElementById("cc-export-weekdate");
+    if (exportWeekBtn) exportWeekBtn.addEventListener("click", () => { openDatePicker("exportweekdate"); render(); });
+    const exportMonthSel = document.getElementById("cc-export-month");
+    if (exportMonthSel) exportMonthSel.addEventListener("change", () => { exportMonth = parseInt(exportMonthSel.value, 10); });
+    const exportQuarterSel = document.getElementById("cc-export-quarter");
+    if (exportQuarterSel) exportQuarterSel.addEventListener("change", () => { exportQuarter = parseInt(exportQuarterSel.value, 10); });
+    const exportYearSel = document.getElementById("cc-export-year");
+    if (exportYearSel) exportYearSel.addEventListener("change", () => { exportYear = parseInt(exportYearSel.value, 10); });
+
+    const exportViewBtn = document.getElementById("cc-export-view");
+    if (exportViewBtn) exportViewBtn.addEventListener("click", () => {
+      const { rows, summary, meta } = buildExportData();
+      showExportDialog = false;
+      render();
+      if (rows.length === 0 && summary.ingresos === 0 && summary.egresos === 0) { showToast("No hay datos para ese período"); return; }
+      const html = buildPrintableReportHTML(rows, meta, summary);
+      openPrintableReport(html);
+    });
+
+    const exportExcelBtn = document.getElementById("cc-export-excel");
+    if (exportExcelBtn) exportExcelBtn.addEventListener("click", async () => {
+      const { rows, summary, meta } = buildExportData();
+      showExportDialog = false;
+      render();
+      if (rows.length === 0 && summary.ingresos === 0 && summary.egresos === 0) { showToast("No hay datos para ese período"); return; }
+      try {
+        const wb = buildMejoradoXLSX(rows, meta, summary);
+        const result = await saveWorkbook(wb, "reporte_control.xlsx");
+        showToast(result && result.status === "delivered" ? "Reporte enviado" : "Reporte descargado");
+      } catch (err) {
+        showToast(downloadErrorMessage(err));
+      }
     });
 
     const filterToggle = document.getElementById("cc-filter-toggle");
