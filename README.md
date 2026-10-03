@@ -156,4 +156,4 @@ Pasos para configurarlo desde cero:
 
 ## Nota legal
 
-Control está inspirada conceptualmente en apps de gestión financiera para pequeños negocios (como Treinta), pero es una implementación propia, sin usar su nombre, logo, código ni activos visuales. El diseño (estructura de navegación, layout de inicio, paleta de colores) fue elaborado de forma independiente para diferenciarse visualmente. Este README no constituye asesoría legal; si se planea monetizar la app, se recomienda verificar la disponibilidad de la marca "Control" y consultar con un abogado de propiedad intelectual antes del lanzamiento comercial.
+Control está inspirada conceptualmente en apps de gestión financiera para pequeños negocios, pero es una implementación propia, sin usar su nombre, logo, código ni activos visuales. El diseño (estructura de navegación, layout de inicio, paleta de colores) fue elaborado de forma independiente para diferenciarse visualmente. Este README no constituye asesoría legal; si se planea monetizar la app, se recomienda verificar la disponibilidad de la marca "Control" y consultar con un abogado de propiedad intelectual antes del lanzamiento comercial.
