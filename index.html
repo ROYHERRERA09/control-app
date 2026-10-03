@@ -505,10 +505,11 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
   let pagoNote = "";
 
   // Configuraciones state
-  let settings = { businessName: "Mi negocio", ownerName: "Propietario", currency: "$", pin: null };
+  let settings = { businessName: "Mi negocio", ownerName: "Propietario", phone: "", currency: "$", pin: null };
   let settingsLoaded = false;
   let cfgBusinessName = "";
   let cfgOwnerName = "";
+  let cfgPhone = "";
   let cfgCurrency = "";
   let confirmResetAll = false;
   let showProfileEditSheet = false;
@@ -991,6 +992,8 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
     const meta = {
       businessName: settings.businessName || "Mi negocio",
       ownerName: settings.ownerName || "",
+      phone: settings.phone || "",
+      transCount: rows.length,
       tabLabel: tabLabelsLocal[tab],
       periodLabel: rangeLabel(exportPeriod, refDate),
       generatedStr: nowGen.toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" }) + " · " + nowGen.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit" }),
@@ -1009,14 +1012,23 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
     const currencyFmt = `"${meta.currency}"#,##0.00`;
 
     const aoa = [];
+    const titleRow = aoa.length;
     aoa.push([meta.businessName]);
-    if (meta.ownerName) aoa.push([meta.ownerName]); else aoa.push([]);
+    const subtitleLines = [];
+    if (meta.ownerName) subtitleLines.push(meta.ownerName);
+    if (meta.phone) subtitleLines.push("Tel: " + meta.phone);
+    if (subtitleLines.length === 0) subtitleLines.push("");
+    const subtitleRowStart = aoa.length;
+    subtitleLines.forEach((line) => aoa.push([line]));
     aoa.push([]);
     aoa.push(["Período", meta.periodLabel]);
     aoa.push(["Generado", meta.generatedStr]);
     aoa.push(["Reporte de", meta.tabLabel]);
+    aoa.push(["Transacciones", meta.transCount]);
     aoa.push([]);
+    const summaryHeaderRow = aoa.length;
     aoa.push(["Ingresos del período", "", "Egresos del período", "", "Balance", ""]);
+    const summaryValueRow = aoa.length;
     aoa.push([summary.ingresos, "", summary.egresos, "", summary.balance, ""]);
     aoa.push([]);
     const headerRowIdx = aoa.length;
@@ -1027,35 +1039,38 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
 
     const ws = XLSX.utils.aoa_to_sheet(aoa);
     ws["!cols"] = [{ wch: 16 }, { wch: 16 }, { wch: 26 }, { wch: 14 }, { wch: 12 }, { wch: 13 }];
-    ws["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } },
-      { s: { r: 7, c: 0 }, e: { r: 7, c: 1 } },
-      { s: { r: 7, c: 2 }, e: { r: 7, c: 3 } },
-      { s: { r: 7, c: 4 }, e: { r: 7, c: 5 } },
-      { s: { r: 8, c: 0 }, e: { r: 8, c: 1 } },
-      { s: { r: 8, c: 2 }, e: { r: 8, c: 3 } },
-      { s: { r: 8, c: 4 }, e: { r: 8, c: 5 } },
-    ];
+    const merges = [{ s: { r: titleRow, c: 0 }, e: { r: titleRow, c: 5 } }];
+    for (let i = 0; i < subtitleLines.length; i++) merges.push({ s: { r: subtitleRowStart + i, c: 0 }, e: { r: subtitleRowStart + i, c: 5 } });
+    merges.push(
+      { s: { r: summaryHeaderRow, c: 0 }, e: { r: summaryHeaderRow, c: 1 } },
+      { s: { r: summaryHeaderRow, c: 2 }, e: { r: summaryHeaderRow, c: 3 } },
+      { s: { r: summaryHeaderRow, c: 4 }, e: { r: summaryHeaderRow, c: 5 } },
+      { s: { r: summaryValueRow, c: 0 }, e: { r: summaryValueRow, c: 1 } },
+      { s: { r: summaryValueRow, c: 2 }, e: { r: summaryValueRow, c: 3 } },
+      { s: { r: summaryValueRow, c: 4 }, e: { r: summaryValueRow, c: 5 } },
+    );
+    ws["!merges"] = merges;
 
     const setStyle = (addr, style) => { if (ws[addr]) ws[addr].s = style; };
+    const rc = (r, c) => XLSX.utils.encode_cell({ r, c });
 
-    setStyle("A1", { font: { bold: true, sz: 16, color: { rgb: WHITE } }, fill: { patternType: "solid", fgColor: { rgb: NAVY } }, alignment: { vertical: "center" } });
-    setStyle("A2", { font: { sz: 11, color: { rgb: WHITE } }, fill: { patternType: "solid", fgColor: { rgb: NAVY } } });
+    setStyle(rc(titleRow, 0), { font: { bold: true, sz: 16, color: { rgb: WHITE } }, fill: { patternType: "solid", fgColor: { rgb: NAVY } }, alignment: { vertical: "center" } });
+    for (let i = 0; i < subtitleLines.length; i++) {
+      setStyle(rc(subtitleRowStart + i, 0), { font: { sz: 11, color: { rgb: WHITE } }, fill: { patternType: "solid", fgColor: { rgb: NAVY } } });
+    }
 
-    setStyle("A4", { font: { bold: true, sz: 10, color: { rgb: NAVYSOFT } } });
-    setStyle("B4", { font: { bold: true, sz: 11, color: { rgb: NAVY } } });
-    setStyle("A5", { font: { bold: true, sz: 10, color: { rgb: NAVYSOFT } } });
-    setStyle("B5", { font: { sz: 11, color: { rgb: NAVY } } });
-    setStyle("A6", { font: { bold: true, sz: 10, color: { rgb: NAVYSOFT } } });
-    setStyle("B6", { font: { sz: 11, color: { rgb: NAVY } } });
+    const metaRowStart = subtitleRowStart + subtitleLines.length + 1; // +1 for blank spacer row
+    for (let i = 0; i < 4; i++) {
+      setStyle(rc(metaRowStart + i, 0), { font: { bold: true, sz: 10, color: { rgb: NAVYSOFT } } });
+      setStyle(rc(metaRowStart + i, 1), { font: { bold: i === 0, sz: 11, color: { rgb: NAVY } } });
+    }
 
-    setStyle("A8", { font: { bold: true, sz: 10, color: { rgb: MINT_TX } }, fill: { patternType: "solid", fgColor: { rgb: MINT_BG } }, alignment: { horizontal: "center" } });
-    setStyle("C8", { font: { bold: true, sz: 10, color: { rgb: CORAL_TX } }, fill: { patternType: "solid", fgColor: { rgb: CORAL_BG } }, alignment: { horizontal: "center" } });
-    setStyle("E8", { font: { bold: true, sz: 10, color: { rgb: WHITE } }, fill: { patternType: "solid", fgColor: { rgb: NAVY } }, alignment: { horizontal: "center" } });
-    setStyle("A9", { font: { bold: true, sz: 14, color: { rgb: MINT_TX } }, fill: { patternType: "solid", fgColor: { rgb: MINT_BG } }, alignment: { horizontal: "center" }, numFmt: currencyFmt });
-    setStyle("C9", { font: { bold: true, sz: 14, color: { rgb: CORAL_TX } }, fill: { patternType: "solid", fgColor: { rgb: CORAL_BG } }, alignment: { horizontal: "center" }, numFmt: currencyFmt });
-    setStyle("E9", { font: { bold: true, sz: 14, color: { rgb: WHITE } }, fill: { patternType: "solid", fgColor: { rgb: NAVY } }, alignment: { horizontal: "center" }, numFmt: currencyFmt });
+    setStyle(rc(summaryHeaderRow, 0), { font: { bold: true, sz: 10, color: { rgb: MINT_TX } }, fill: { patternType: "solid", fgColor: { rgb: MINT_BG } }, alignment: { horizontal: "center" } });
+    setStyle(rc(summaryHeaderRow, 2), { font: { bold: true, sz: 10, color: { rgb: CORAL_TX } }, fill: { patternType: "solid", fgColor: { rgb: CORAL_BG } }, alignment: { horizontal: "center" } });
+    setStyle(rc(summaryHeaderRow, 4), { font: { bold: true, sz: 10, color: { rgb: WHITE } }, fill: { patternType: "solid", fgColor: { rgb: NAVY } }, alignment: { horizontal: "center" } });
+    setStyle(rc(summaryValueRow, 0), { font: { bold: true, sz: 14, color: { rgb: MINT_TX } }, fill: { patternType: "solid", fgColor: { rgb: MINT_BG } }, alignment: { horizontal: "center" }, numFmt: currencyFmt });
+    setStyle(rc(summaryValueRow, 2), { font: { bold: true, sz: 14, color: { rgb: CORAL_TX } }, fill: { patternType: "solid", fgColor: { rgb: CORAL_BG } }, alignment: { horizontal: "center" }, numFmt: currencyFmt });
+    setStyle(rc(summaryValueRow, 4), { font: { bold: true, sz: 14, color: { rgb: WHITE } }, fill: { patternType: "solid", fgColor: { rgb: NAVY } }, alignment: { horizontal: "center" }, numFmt: currencyFmt });
 
     for (let c = 0; c < 6; c++) {
       const addr = XLSX.utils.encode_cell({ r: headerRowIdx, c });
@@ -1143,10 +1158,12 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
       <div>
         <p class="biz-name">${esc(meta.businessName)}</p>
         ${meta.ownerName ? `<p class="biz-owner">${esc(meta.ownerName)}</p>` : ""}
+        ${meta.phone ? `<p class="biz-owner">Tel: ${esc(meta.phone)}</p>` : ""}
       </div>
       <div class="report-meta">
         <div><b>Período:</b> ${esc(meta.periodLabel)}</div>
         <div><b>Reporte de:</b> ${esc(meta.tabLabel)}</div>
+        <div><b>Transacciones:</b> ${meta.transCount}</div>
         <div>Generado: ${esc(meta.generatedStr)}</div>
       </div>
     </div>
@@ -1864,6 +1881,8 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
         <input class="cc-input" type="text" id="cc-cfg-business" value="${esc(cfgBusinessName)}" placeholder="Mi negocio" />
         <label class="cc-label">Nombre del propietario</label>
         <input class="cc-input" type="text" id="cc-cfg-owner" value="${esc(cfgOwnerName)}" placeholder="Propietario" />
+        <label class="cc-label">Teléfono (opcional)</label>
+        <input class="cc-input" type="tel" id="cc-cfg-phone" value="${esc(cfgPhone)}" placeholder="Ej. 6671-3116" />
         <label class="cc-label">Símbolo de moneda</label>
         <input class="cc-input" type="text" id="cc-cfg-currency" value="${esc(cfgCurrency)}" placeholder="$" style="margin-bottom:8px;max-width:100px;" />
         <button class="cc-submit" id="cc-save-settings" style="margin-top:6px;">Guardar cambios</button>
@@ -2686,6 +2705,7 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
         if (key === "config") {
           cfgBusinessName = settings.businessName || "";
           cfgOwnerName = settings.ownerName || "";
+          cfgPhone = settings.phone || "";
           cfgCurrency = settings.currency || "$";
         }
         page = key; render(); return;
@@ -3439,9 +3459,11 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
     if (saveSettingsBtn) saveSettingsBtn.addEventListener("click", () => {
       const businessVal = document.getElementById("cc-cfg-business").value.trim();
       const ownerVal = document.getElementById("cc-cfg-owner").value.trim();
+      const phoneVal = document.getElementById("cc-cfg-phone").value.trim();
       const currencyVal = document.getElementById("cc-cfg-currency").value.trim();
       settings.businessName = businessVal || "Mi negocio";
       settings.ownerName = ownerVal || "Propietario";
+      settings.phone = phoneVal;
       settings.currency = currencyVal || "$";
       saveSettings();
       showToast("Configuración guardada");
