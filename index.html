@@ -2014,7 +2014,9 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
         <label class="cc-label">Nombre del negocio</label>
         <input class="cc-input" type="text" id="cc-pf-business" value="${esc(cfgBusinessName)}" placeholder="Mi negocio" />
         <label class="cc-label">Nombre del propietario</label>
-        <input class="cc-input" type="text" id="cc-pf-owner" value="${esc(cfgOwnerName)}" placeholder="Propietario" style="margin-bottom:6px;" />
+        <input class="cc-input" type="text" id="cc-pf-owner" value="${esc(cfgOwnerName)}" placeholder="Propietario" />
+        <label class="cc-label">Teléfono (opcional)</label>
+        <input class="cc-input" type="tel" id="cc-pf-phone" value="${esc(cfgPhone)}" placeholder="Ej. 6671-3116" style="margin-bottom:6px;" />
         <button class="cc-submit" id="cc-save-profile-edit">Guardar cambios</button>
       </div>`;
   }
@@ -2733,6 +2735,7 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
     if (editProfileBtn) editProfileBtn.addEventListener("click", () => {
       cfgBusinessName = settings.businessName || "";
       cfgOwnerName = settings.ownerName || "";
+      cfgPhone = settings.phone || "";
       sidebarOpen = false;
       showProfileEditSheet = true;
       render();
@@ -2745,8 +2748,10 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
     if (saveProfileEditBtn) saveProfileEditBtn.addEventListener("click", () => {
       const businessVal = document.getElementById("cc-pf-business").value.trim();
       const ownerVal = document.getElementById("cc-pf-owner").value.trim();
+      const phoneVal = document.getElementById("cc-pf-phone").value.trim();
       settings.businessName = businessVal || "Mi negocio";
       settings.ownerName = ownerVal || "Propietario";
+      settings.phone = phoneVal;
       saveSettings();
       showProfileEditSheet = false;
       showToast("Perfil actualizado");
