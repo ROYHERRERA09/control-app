@@ -451,6 +451,13 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   let fDate = todayStr();
   let editingMovimientoId = null;
   let showExportDialog = false;
+  let exportStep = "choose"; // "choose" | "detail"
+  let exportPeriod = "week";
+  let exportDay = todayStr();
+  let exportWeekDate = todayStr();
+  let exportMonth = new Date().getMonth();
+  let exportQuarter = Math.floor(new Date().getMonth() / 3);
+  let exportYear = new Date().getFullYear();
 
   // Vender state
   let productSearch = "";
