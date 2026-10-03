@@ -463,6 +463,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   let ventaMedio = "Efectivo";
   let ventaError = "";
   let statsPeriod = "week";
+  let currentPeriodRef = new Date(); // kept in sync with periodRef each render, so other functions (like exporting) can use it
   let selectedYear = new Date().getFullYear();
   let selectedMonth = new Date().getMonth();
   let selectedQuarter = Math.floor(new Date().getMonth() / 3);
@@ -1836,6 +1837,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
 
   function renderExportDialogSheet() {
     const tabLabels = { ingreso: "Ingresos", egreso: "Egresos", por_cobrar: "Por cobrar", por_pagar: "Por pagar" };
+    const exportLabels = { day: "Diario (el día que estás viendo)", week: "Semanal (la semana que estás viendo)", month: "Mensual (el mes que estás viendo)", quarter: "Trimestral (el trimestre que estás viendo)", year: "Anual (el año que estás viendo)" };
+    const btnsHTML = PERIODS.map((p) => `<button class="cc-btn-outline" data-exportperiod="${p.key}" style="width:100%;">${esc(exportLabels[p.key] || p.label)}</button>`).join("");
     return `
       <div class="cc-overlay${showExportDialog ? " open" : ""}" id="cc-export-overlay"></div>
       <div class="cc-sheet${showExportDialog ? " open" : ""}">
@@ -1845,9 +1848,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
         </div>
         <p style="font-size:12.5px;color:var(--navySoft);margin:0 0 16px;">Se exportarán tus movimientos de <b>${tabLabels[tab]}</b>. ¿De qué período?</p>
         <div style="display:flex;flex-direction:column;gap:8px;">
-          <button class="cc-btn-outline" data-exportperiod="week" style="width:100%;">Esta semana</button>
-          <button class="cc-btn-outline" data-exportperiod="month" style="width:100%;">Este mes</button>
-          <button class="cc-btn-outline" data-exportperiod="year" style="width:100%;">Este año</button>
+          ${btnsHTML}
         </div>
       </div>`;
   }
@@ -2102,6 +2103,7 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       : period === "week" ? toDate(selectedWeekDate)
       : period === "day" ? toDate(selectedDay)
       : now;
+    currentPeriodRef = periodRef;
     const [s, e] = rangeFor(period, periodRef);
     const enPeriodo = movimientos.filter((m) => { const t = toDate(m.date).getTime(); return t >= s.getTime() && t < e.getTime(); });
     const ing = enPeriodo.filter((m) => m.type === "ingreso").reduce((a, m) => a + m.amount, 0);
@@ -2521,8 +2523,8 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     root.querySelectorAll("[data-exportperiod]").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const chosenPeriod = btn.getAttribute("data-exportperiod");
-        const now = new Date();
-        const [s, e] = rangeFor(chosenPeriod, now);
+        const refDate = chosenPeriod === period ? currentPeriodRef : new Date();
+        const [s, e] = rangeFor(chosenPeriod, refDate);
         const rows = movimientos.filter((m) => { const t = toDate(m.date).getTime(); return t >= s.getTime() && t < e.getTime() && m.type === tab; });
         showExportDialog = false;
         render();
