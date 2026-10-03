@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Control</title>
 <meta name="theme-color" content="#16213E" />
+<meta name="color-scheme" content="light" />
 <link rel="manifest" href="manifest.json" />
 <link rel="icon" href="icon-192.png" />
 <link rel="apple-touch-icon" href="icon-180.png" />
@@ -16,13 +17,14 @@
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <style>
-  :root { box-sizing: border-box; }
+  :root { box-sizing: border-box; color-scheme: light; }
   html, body {
     margin: 0; padding: 0; background: #F5F6F8;
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  html[data-theme="dark"], html[data-theme="dark"] body { background: #11182B; }
 </style>
 </head>
 <body>
@@ -44,18 +46,40 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
     --mintText: #1E9E6B;
     --coralBg: #FDE6E3;
     --coralText: #E0473A;
+    --navyChipBg: #EAF0FB;
+    --yellowSoftText: #8A6A00;
+    --accent: #16213E;
     background: var(--bg);
     color: var(--navy);
     min-height: 100vh;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     box-sizing: border-box;
     position: relative;
+    transition: background-color .2s ease, color .2s ease;
   }
   #cc-root * { box-sizing: border-box; }
 
+  /* ---- dark mode palette ---- */
+  html[data-theme="dark"] #cc-root {
+    --bg: #11182B;
+    --card: #1A2338;
+    --navy: #ECEFF6;
+    --navySoft: #9AA7C4;
+    --border: #2B3650;
+    --yellow: #FFC72C;
+    --yellowSoft: #3A3220;
+    --mintBg: #16332A;
+    --mintText: #4ED99B;
+    --coralBg: #3A2024;
+    --coralText: #F28A82;
+    --navyChipBg: #1F2E4D;
+    --yellowSoftText: #F5C84A;
+    --accent: #3C5280;
+  }
+
   /* ---- sidebar (slide-in drawer) ---- */
   .cc-sidebar {
-    position: fixed; top: 0; left: 0; bottom: 0; width: 240px; background: #fff;
+    position: fixed; top: 0; left: 0; bottom: 0; width: 240px; background: var(--card);
     border-right: 1px solid var(--border);
     padding: calc(20px + env(safe-area-inset-top, 0px)) 14px calc(20px + env(safe-area-inset-bottom, 0px));
     transform: translateX(-105%); transition: transform .26s cubic-bezier(.32,.72,0,1);
@@ -86,7 +110,7 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
 
   /* ---- bottom tab bar ---- */
   .cc-bottomnav {
-    position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--border);
+    position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--border);
     display: flex; z-index: 44; padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   .cc-bottomnav-item {
@@ -136,14 +160,14 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
   .cc-hamburger:active { transform: scale(0.92); }
   .cc-page-title { font-size: 19px; font-weight: 800; color: var(--navy); flex: 1; margin: 0; }
   .cc-header-actions { display: flex; gap: 8px; margin-bottom: 14px; }
-  .cc-btn-navy { background: var(--navy); color: #fff; border: none; border-radius: 999px; padding: 9px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; font: inherit; flex: 1; white-space: nowrap; transition: transform .12s ease, opacity .12s ease; }
+  .cc-btn-navy { background: var(--accent); color: #fff; border: none; border-radius: 999px; padding: 9px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; font: inherit; flex: 1; white-space: nowrap; transition: transform .12s ease, opacity .12s ease; }
   .cc-btn-navy:active { transform: scale(0.96); opacity: .9; }
   .cc-btn-outline { background: var(--card); color: var(--navy); border: 1px solid var(--border); border-radius: 999px; padding: 9px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; font: inherit; flex: 1; white-space: nowrap; transition: transform .12s ease, background-color .12s ease; }
   .cc-btn-outline:active { transform: scale(0.96); background: var(--bg); }
 
   .cc-filter-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
   .cc-filter-btn { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; font-size: 12.5px; font-weight: 700; color: var(--navy); cursor: pointer; font: inherit; display: flex; align-items: center; gap: 6px; }
-  .cc-filter-btn.on { background: var(--navy); color: #fff; border-color: transparent; }
+  .cc-filter-btn.on { background: var(--accent); color: #fff; border-color: transparent; }
   .cc-select-wrap { position: relative; flex: 1; min-width: 110px; }
   .cc-select {
     appearance: none; -webkit-appearance: none; width: 100%; background: var(--card);
@@ -157,18 +181,18 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
   .cc-range-nav:active { background: var(--yellowSoft); }
   .cc-seg-row { display: flex; flex-wrap: wrap; gap: 6px; }
   .cc-seg-btn { flex: 1 1 auto; min-width: 58px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 9px 6px; font-size: 11.5px; font-weight: 700; color: var(--navySoft); font: inherit; cursor: pointer; text-align: center; }
-  .cc-seg-btn.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .cc-seg-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .cc-search-wrap { position: relative; margin-bottom: 14px; }
   .cc-search { width: 100%; border: 1px solid var(--border); background: var(--card); border-radius: 10px; padding: 10px 12px 10px 32px; font-size: 13px; font: inherit; color: var(--navy); }
   .cc-search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--navySoft); font-size: 13px; }
   .cc-cat-filter-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
   .cc-cat-chip { border-radius: 999px; padding: 6px 12px; font-size: 11.5px; font-weight: 600; border: 1px solid var(--border); background: var(--card); color: var(--navySoft); cursor: pointer; font: inherit; white-space: nowrap; flex: none; }
-  .cc-cat-chip.active { background: var(--navy); color: #fff; border-color: transparent; }
+  .cc-cat-chip.active { background: var(--accent); color: #fff; border-color: transparent; }
 
   .cc-stats { display: flex; gap: 8px; margin-bottom: 16px; }
   .cc-stat { flex: 1; background: var(--card); border-radius: 14px; padding: 12px 10px; box-shadow: 0 2px 10px rgba(22,33,62,0.06); }
   .cc-stat-icon { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; font-size: 14px; }
-  .cc-stat-icon.navy { background: #EAF0FB; color: var(--navy); }
+  .cc-stat-icon.navy { background: var(--navyChipBg); color: var(--navy); }
   .cc-stat-icon.mint { background: var(--mintBg); color: var(--mintText); }
   .cc-stat-icon.coral { background: var(--coralBg); color: var(--coralText); }
   .cc-stat-label { font-size: 11px; color: var(--navySoft); font-weight: 600; margin: 0 0 3px; }
@@ -183,7 +207,7 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
   .cc-tab.active { color: var(--navy); border-bottom-color: var(--navy); }
 
   .cc-pending-total { display: flex; justify-content: space-between; align-items: center; background: var(--yellowSoft); border-radius: 10px; padding: 10px 12px; margin: 10px 0; font-size: 12.5px; font-weight: 700; color: var(--navy); }
-  .cc-pending-total.pagar { background: #EAF0FB; }
+  .cc-pending-total.pagar { background: var(--navyChipBg); }
 
   .cc-count-row { display: flex; justify-content: flex-end; margin: 10px 0 6px; }
   .cc-count { color: var(--navySoft); font-size: 12px; font-weight: 600; }
@@ -220,8 +244,8 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
   .cc-type-btn { border-radius: 10px; padding: 9px 4px; font-size: 12px; font-weight: 700; border: 1px solid var(--border); background: var(--card); color: var(--navySoft); cursor: pointer; font: inherit; }
   .cc-type-btn.active-ingreso { background: var(--mintBg); color: var(--mintText); border-color: transparent; }
   .cc-type-btn.active-egreso { background: var(--coralBg); color: var(--coralText); border-color: transparent; }
-  .cc-type-btn.active-por_cobrar { background: var(--yellowSoft); color: #8A6A00; border-color: transparent; }
-  .cc-type-btn.active-por_pagar { background: #EAF0FB; color: var(--navy); border-color: transparent; }
+  .cc-type-btn.active-por_cobrar { background: var(--yellowSoft); color: var(--yellowSoftText); border-color: transparent; }
+  .cc-type-btn.active-por_pagar { background: var(--navyChipBg); color: var(--navy); border-color: transparent; }
   .cc-label { color: var(--navySoft); font-size: 11.5px; font-weight: 700; display: block; margin-bottom: 6px; }
   .cc-input {
     width: 100%; border: 1px solid var(--border); background: var(--card); color: var(--navy);
@@ -231,14 +255,14 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
   .cc-chips { display: flex; gap: 6px; margin-bottom: 10px; }
   .cc-chips::-webkit-scrollbar { display: none; }
   .cc-chip { border-radius: 999px; padding: 6px 6px; font-size: 9.5px; font-weight: 600; border: 1px solid var(--border); background: var(--card); color: var(--navySoft); cursor: pointer; font: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 0; text-align: center; }
-  .cc-chip.active { background: var(--navy); color: #fff; border-color: transparent; }
+  .cc-chip.active { background: var(--accent); color: #fff; border-color: transparent; }
   .cc-error { color: var(--coralText); font-size: 12px; margin: 0 0 8px; font-weight: 600; }
-  .cc-submit { width: 100%; border: none; color: #fff; background: var(--navy); border-radius: 999px; padding: 14px; font-size: 14px; font-weight: 800; cursor: pointer; margin-top: 4px; transition: transform .12s ease, opacity .12s ease; }
+  .cc-submit { width: 100%; border: none; color: #fff; background: var(--accent); border-radius: 999px; padding: 14px; font-size: 14px; font-weight: 800; cursor: pointer; margin-top: 4px; transition: transform .12s ease, opacity .12s ease; }
   .cc-submit:active { transform: scale(0.98); opacity: .92; }
 
   .cc-fab-yellow { position: fixed; bottom: calc(80px + env(safe-area-inset-bottom, 0px)); right: 22px; background: var(--yellow); color: var(--navy); border: none; border-radius: 50%; width: 56px; height: 56px; font-size: 26px; font-weight: 700; line-height: 1; cursor: pointer; box-shadow: 0 10px 24px rgba(255,199,44,0.45); z-index: 46; transition: transform .15s ease, box-shadow .15s ease; }
   .cc-fab-yellow:active { transform: scale(0.92); }
-  .cc-toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 12.5px; font-weight: 600; z-index: 80; box-shadow: 0 6px 18px rgba(22,33,62,0.3); }
+  .cc-toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); background: var(--accent); color: #fff; padding: 10px 18px; border-radius: 999px; font-size: 12.5px; font-weight: 600; z-index: 80; box-shadow: 0 6px 18px rgba(22,33,62,0.3); }
   .cc-loading { padding: 60px 20px; text-align: center; color: var(--navySoft); font-size: 14px; }
 
   /* ---- custom date picker (Monday-first calendar) ---- */
@@ -261,8 +285,8 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
   }
   .cc-dp-cell.empty { cursor: default; }
   .cc-dp-cell:not(.empty):active { transform: scale(0.88); background: var(--bg); }
-  .cc-dp-cell.today { color: #8A6A00; font-weight: 800; box-shadow: inset 0 0 0 1.5px var(--yellow); }
-  .cc-dp-cell.selected { background: var(--navy); color: #fff; }
+  .cc-dp-cell.today { color: var(--yellowSoftText); font-weight: 800; box-shadow: inset 0 0 0 1.5px var(--yellow); }
+  .cc-dp-cell.selected { background: var(--accent); color: #fff; }
   .cc-dp-cell.selected.today { box-shadow: none; color: #fff; }
 
   /* ---- Vender page ---- */
@@ -274,10 +298,10 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
   .cc-product-price { font-size: 14px; font-weight: 800; color: var(--mintText); margin: 0; }
   .cc-product-stock { font-size: 11px; color: var(--navySoft); margin: 4px 0 0; }
   .cc-product-stock.low { color: var(--coralText); font-weight: 700; }
-  .cc-product-qty-badge { position: absolute; top: -8px; right: -8px; background: var(--navy); color: #fff; border-radius: 999px; min-width: 22px; height: 22px; padding: 0 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; }
+  .cc-product-qty-badge { position: absolute; top: -8px; right: -8px; background: var(--accent); color: #fff; border-radius: 999px; min-width: 22px; height: 22px; padding: 0 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; }
   .cc-product-del { position: absolute; bottom: 8px; right: 8px; background: var(--bg); border: none; color: var(--navySoft); width: 22px; height: 22px; border-radius: 50%; font-size: 11px; cursor: pointer; }
 
-  .cc-cart-bar { position: fixed; left: 12px; right: 12px; bottom: calc(74px + env(safe-area-inset-bottom, 0px)); background: var(--navy); color: #fff; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; z-index: 45; max-width: 496px; margin: 0 auto; border-radius: 16px; box-shadow: 0 8px 20px rgba(22,33,62,0.3); }
+  .cc-cart-bar { position: fixed; left: 12px; right: 12px; bottom: calc(74px + env(safe-area-inset-bottom, 0px)); background: var(--accent); color: #fff; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; z-index: 45; max-width: 496px; margin: 0 auto; border-radius: 16px; box-shadow: 0 8px 20px rgba(22,33,62,0.3); }
   .cc-cart-info { font-size: 12.5px; font-weight: 700; line-height: 1.3; }
   .cc-cart-info b { font-size: 15px; }
   .cc-cart-btn { background: var(--yellow); color: var(--navy); border: none; border-radius: 999px; padding: 10px 18px; font-size: 13px; font-weight: 800; cursor: pointer; font: inherit; }
@@ -505,7 +529,7 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
   let pagoNote = "";
 
   // Configuraciones state
-  let settings = { businessName: "Mi negocio", ownerName: "Propietario", phone: "", currency: "$", pin: null };
+  let settings = { businessName: "Mi negocio", ownerName: "Propietario", phone: "", currency: "$", pin: null, theme: "light" };
   let settingsLoaded = false;
   let cfgBusinessName = "";
   let cfgOwnerName = "";
@@ -843,6 +867,21 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
       showToast("No se pudo guardar la configuración.");
     }
   }
+  function applyTheme() {
+    const theme = settings.theme === "dark" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.style.colorScheme = theme;
+    const colorSchemeMeta = document.querySelector('meta[name="color-scheme"]');
+    if (colorSchemeMeta) colorSchemeMeta.setAttribute("content", theme);
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) themeColorMeta.setAttribute("content", theme === "dark" ? "#0D1424" : "#16213E");
+  }
+  function toggleTheme() {
+    settings.theme = settings.theme === "dark" ? "light" : "dark";
+    applyTheme();
+    saveSettings();
+    render();
+  }
   let downloadsCapPromise = null;
   function getDownloadsCapability() {
     if (!downloadsCapPromise) {
@@ -922,23 +961,23 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
       const egH = (d.eg / max) * (H - padTop - padBottom);
       const baseY = H - padBottom;
       if (d.current) {
-        bars += `<rect x="${i * groupW + 1}" y="0" width="${groupW - 2}" height="${H - padBottom}" fill="#FFF3D6" rx="6"/>`;
+        bars += `<rect x="${i * groupW + 1}" y="0" width="${groupW - 2}" height="${H - padBottom}" style="fill:var(--yellowSoft)" rx="6"/>`;
       }
-      bars += `<rect x="${cx - barW - 2}" y="${baseY - ingH}" width="${barW}" height="${Math.max(ingH, 0.5)}" fill="#1E9E6B" rx="4"/>`;
-      bars += `<rect x="${cx + 2}" y="${baseY - egH}" width="${barW}" height="${Math.max(egH, 0.5)}" fill="#E0473A" rx="4"/>`;
+      bars += `<rect x="${cx - barW - 2}" y="${baseY - ingH}" width="${barW}" height="${Math.max(ingH, 0.5)}" style="fill:var(--mintText)" rx="4"/>`;
+      bars += `<rect x="${cx + 2}" y="${baseY - egH}" width="${barW}" height="${Math.max(egH, 0.5)}" style="fill:var(--coralText)" rx="4"/>`;
       const labelLines = String(d.label).includes("\n") ? d.label.split("\n") : String(d.label).split(" ");
       const lineY1 = H - 16, lineY2 = H - 6;
       const weight = d.current ? "800" : "600";
-      const color = d.current ? "#16213E" : "#6B7A99";
+      const color = d.current ? "var(--navy)" : "var(--navySoft)";
       if (labelLines.length > 1 && String(d.label).length > 6) {
-        bars += `<text x="${cx}" y="${lineY1}" font-size="9" fill="${color}" text-anchor="middle" font-weight="${weight}">${esc(labelLines[0])}</text>`;
-        bars += `<text x="${cx}" y="${lineY2}" font-size="9" fill="${color}" text-anchor="middle" font-weight="${weight}">${esc(labelLines.slice(1).join(" "))}</text>`;
+        bars += `<text x="${cx}" y="${lineY1}" font-size="9" style="fill:${color}" text-anchor="middle" font-weight="${weight}">${esc(labelLines[0])}</text>`;
+        bars += `<text x="${cx}" y="${lineY2}" font-size="9" style="fill:${color}" text-anchor="middle" font-weight="${weight}">${esc(labelLines.slice(1).join(" "))}</text>`;
       } else {
-        bars += `<text x="${cx}" y="${lineY2}" font-size="9.5" fill="${color}" text-anchor="middle" font-weight="${weight}">${esc(d.label)}</text>`;
+        bars += `<text x="${cx}" y="${lineY2}" font-size="9.5" style="fill:${color}" text-anchor="middle" font-weight="${weight}">${esc(d.label)}</text>`;
       }
     });
     return `<svg class="cc-chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-      <line x1="0" y1="${H - padBottom}" x2="${W}" y2="${H - padBottom}" stroke="#E5E8EE" />
+      <line x1="0" y1="${H - padBottom}" x2="${W}" y2="${H - padBottom}" style="stroke:var(--border)" />
       ${bars}
     </svg>`;
   }
@@ -946,8 +985,8 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
   function badgeColors(type) {
     if (type === "ingreso") return { bg: "var(--mintBg)", fg: "var(--mintText)", icon: "↑" };
     if (type === "egreso") return { bg: "var(--coralBg)", fg: "var(--coralText)", icon: "↓" };
-    if (type === "por_cobrar") return { bg: "var(--yellowSoft)", fg: "#8A6A00", icon: "◔" };
-    return { bg: "#EAF0FB", fg: "var(--navy)", icon: "◔" };
+    if (type === "por_cobrar") return { bg: "var(--yellowSoft)", fg: "var(--yellowSoftText)", icon: "◔" };
+    return { bg: "var(--navyChipBg)", fg: "var(--navy)", icon: "◔" };
   }
 
   function downloadXLSX(rows, tabLabel) {
@@ -1122,7 +1161,7 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
         </tr>`).join("");
     const total = rows.reduce((a, m) => a + m.amount, 0);
     return `<!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1" /><title>Reporte - ${esc(meta.businessName)}</title>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="color-scheme" content="light" /><title>Reporte - ${esc(meta.businessName)}</title>
 <style>
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; color-adjust: exact; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin:0; padding: 28px 20px; background: #fff; color: #16213E; }
@@ -1700,7 +1739,7 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
         return `
         <li class="cc-row" data-openproveedor="${p.id}" style="cursor:pointer;">
           <div class="cc-row-left">
-            <div class="cc-avatar" style="width:32px;height:32px;font-size:11px;background:#EAF0FB;color:var(--navy);">${esc(initials)}</div>
+            <div class="cc-avatar" style="width:32px;height:32px;font-size:11px;background:var(--navyChipBg);color:var(--navy);">${esc(initials)}</div>
             <div style="min-width:0">
               <p class="cc-row-cat">${esc(p.name)}</p>
               <p class="cc-row-meta">${p.phone ? esc(p.phone) : "Sin teléfono"}</p>
@@ -1873,6 +1912,15 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
         <p class="cc-card-label">Tu cuenta</p>
         <p style="font-size:12.5px;color:var(--navySoft);margin:0 0 14px;">Conectado como <b style="color:var(--navy);">${esc(authUser ? authUser.email : "")}</b>. Tus datos se sincronizan automáticamente entre dispositivos.</p>
         <button class="cc-btn-outline" id="cc-account-signout" style="width:100%;">Cerrar sesión de esta cuenta</button>
+      </div>
+
+      <div class="cc-card">
+        <p class="cc-card-label">Apariencia</p>
+        <p style="font-size:12.5px;color:var(--navySoft);margin:0 0 12px;">Elige cómo se ve Control en este dispositivo.</p>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="cc-seg-btn${settings.theme !== "dark" ? " active" : ""}" id="cc-theme-light" style="flex:1;">☀ Claro</button>
+          <button type="button" class="cc-seg-btn${settings.theme === "dark" ? " active" : ""}" id="cc-theme-dark" style="flex:1;">🌙 Oscuro</button>
+        </div>
       </div>
 
       <div class="cc-card">
@@ -2126,8 +2174,8 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
     const recientes = [...movimientos].sort((a, b) => b.createdAt - a.createdAt).slice(0, 5);
 
     const quickItems = [
-      { key: "vender", icon: "🏷", label: "Vender", bg: "var(--yellowSoft)", fg: "#8A6A00" },
-      { key: "balance", icon: "📊", label: "Balance", bg: "#EAF0FB", fg: "var(--navy)" },
+      { key: "vender", icon: "🏷", label: "Vender", bg: "var(--yellowSoft)", fg: "var(--yellowSoftText)" },
+      { key: "balance", icon: "📊", label: "Balance", bg: "var(--navyChipBg)", fg: "var(--navy)" },
       { key: "inventario", icon: "📦", label: "Inventario", bg: "var(--mintBg)", fg: "var(--mintText)" },
       { key: "deudas", icon: "💳", label: "Deudas", bg: "var(--coralBg)", fg: "var(--coralText)" },
     ];
@@ -2325,6 +2373,7 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
   }
 
   function render() {
+    applyTheme();
     const root = document.getElementById("cc-root");
     if (authLoading) {
       root.innerHTML = '<div class="cc-loading">Cargando…</div>';
@@ -2571,6 +2620,7 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
         <div class="cc-topbar">
           <button class="cc-hamburger" id="cc-hamburger">☰</button>
           <h1 class="cc-page-title">${pageTitle}</h1>
+          <button class="cc-hamburger" id="cc-theme-quick-toggle" title="Cambiar tema" style="margin-left:auto;">${settings.theme === "dark" ? "☀" : "🌙"}</button>
         </div>
 
         <div class="cc-header-actions">${headerActionsHTML}</div>
@@ -2695,6 +2745,8 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
 
     const hamburger = document.getElementById("cc-hamburger");
     if (hamburger) hamburger.addEventListener("click", () => { sidebarOpen = true; render(); });
+    const themeQuickToggle = document.getElementById("cc-theme-quick-toggle");
+    if (themeQuickToggle) themeQuickToggle.addEventListener("click", () => { toggleTheme(); });
     const sbOverlay = document.getElementById("cc-sb-overlay");
     if (sbOverlay) sbOverlay.addEventListener("click", () => { sidebarOpen = false; render(); });
     const sbClose = document.getElementById("cc-sb-close");
@@ -3450,6 +3502,14 @@ var XLSX={};function make_xlsx_lib(a){a.version="0.18.5",a.style_version="1.2.0"
     if (delProveedorNo) delProveedorNo.addEventListener("click", () => { confirmDeleteProveedorId = null; render(); });
 
     // ---- Configuraciones page events ----
+    const themeLightBtn = document.getElementById("cc-theme-light");
+    if (themeLightBtn) themeLightBtn.addEventListener("click", () => {
+      if (settings.theme === "dark") toggleTheme();
+    });
+    const themeDarkBtn = document.getElementById("cc-theme-dark");
+    if (themeDarkBtn) themeDarkBtn.addEventListener("click", () => {
+      if (settings.theme !== "dark") toggleTheme();
+    });
     const accountSignoutBtn = document.getElementById("cc-account-signout");
     if (accountSignoutBtn) accountSignoutBtn.addEventListener("click", () => {
       appStarted = false;
