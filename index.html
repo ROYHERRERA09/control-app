@@ -522,6 +522,11 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
   let confirmResetAll = false;
   let showProfileEditSheet = false;
 
+  // Importar Excel state
+  let importBusy = false;
+  let importSummary = null; // { added, duplicates, skipped }
+  let importError = "";
+
   // Seguridad / bloqueo state
   let sessionLocked = false;
   let lockPinInput = "";
@@ -975,6 +980,110 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
     const dl = await getDownloadsCapability();
     if (dl) return dl.save({ filename: "reporte_control.xlsx", data: arrayBuffer });
     return browserDownload("reporte_control.xlsx", arrayBuffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  }
+
+  // Importa reportes exportados en Excel (formato de hoja con una fila de
+  // encabezado que incluye "Fecha", "Tipo" y "Valor") y los convierte en
+  // movimientos de Control, sin duplicar lo que ya se haya importado antes.
+  function excelDateToStr(val) {
+    if (val instanceof Date) return dateToStr(val);
+    if (typeof val === "number") {
+      // Número de serie de Excel (días desde 1899-12-30)
+      const d = new Date(Math.round((val - 25569) * 86400000));
+      return dateToStr(new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    }
+    if (typeof val === "string") {
+      const s = val.trim();
+      let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); // DD/MM/YYYY
+      if (m) return `${m[3]}-${String(m[2]).padStart(2, "0")}-${String(m[1]).padStart(2, "0")}`;
+      m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); // YYYY-MM-DD
+      if (m) return `${m[1]}-${String(m[2]).padStart(2, "0")}-${String(m[3]).padStart(2, "0")}`;
+      const d2 = new Date(s);
+      if (!isNaN(d2.getTime())) return dateToStr(d2);
+    }
+    return todayStr();
+  }
+  function matchCategory(list, raw) {
+    if (!raw) return null;
+    const norm = String(raw).trim().toLowerCase();
+    const hit = list.find((c) => c.toLowerCase() === norm);
+    return hit || null;
+  }
+  function matchMedio(raw) {
+    if (!raw) return "Otro";
+    const norm = String(raw).trim().toLowerCase();
+    const hit = MEDIOS.find((m) => m.toLowerCase() === norm);
+    return hit || "Otro";
+  }
+  function parseImportWorkbook(wb) {
+    const toAdd = [];
+    let skipped = 0;
+    for (const sheetName of wb.SheetNames) {
+      const ws = wb.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: null });
+      let headerIdx = -1, cols = null;
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const idx = {};
+        row.forEach((cell, ci) => {
+          const key = String(cell || "").trim().toLowerCase();
+          if (key === "fecha") idx.fecha = ci;
+          else if (key === "tipo") idx.tipo = ci;
+          else if (key === "consecutivo") idx.consecutivo = ci;
+          else if (key === "descripción" || key === "descripcion") idx.descripcion = ci;
+          else if (key === "categoría de gasto" || key === "categoria de gasto" || key === "categoría" || key === "categoria") idx.categoria = ci;
+          else if (key === "contacto") idx.contacto = ci;
+          else if (key === "m. de pago" || key === "medio de pago" || key === "m de pago") idx.medio = ci;
+          else if (key === "valor" || key === "total") idx.valor = ci;
+        });
+        if (idx.fecha !== undefined && idx.tipo !== undefined && idx.valor !== undefined) {
+          headerIdx = i; cols = idx; break;
+        }
+      }
+      if (headerIdx === -1) continue; // esta hoja no tiene un reporte reconocible
+      for (let i = headerIdx + 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.every((c) => c === null || c === "")) continue;
+        const fechaRaw = row[cols.fecha];
+        const tipoRaw = String(row[cols.tipo] || "").trim().toLowerCase();
+        const valorRaw = row[cols.valor];
+        const consecutivo = cols.consecutivo !== undefined ? row[cols.consecutivo] : null;
+        if (!fechaRaw || valorRaw === null || valorRaw === undefined || valorRaw === "") { skipped++; continue; }
+        const amount = parseFloat(valorRaw);
+        if (!amount || isNaN(amount) || amount <= 0) { skipped++; continue; }
+        let type = null;
+        if (tipoRaw.includes("venta")) type = "ingreso";
+        else if (tipoRaw.includes("gasto")) type = "egreso";
+        else { skipped++; continue; }
+        const categoriaRaw = cols.categoria !== undefined ? row[cols.categoria] : null;
+        const category = matchCategory(CATS[type], categoriaRaw) || (type === "ingreso" ? "Ventas" : "Otros gastos");
+        const medio = matchMedio(cols.medio !== undefined ? row[cols.medio] : null);
+        const contactoRaw = cols.contacto !== undefined ? row[cols.contacto] : null;
+        const contacto = contactoRaw && String(contactoRaw).trim() !== "-" ? String(contactoRaw).trim() : "";
+        const descripcion = cols.descripcion !== undefined ? String(row[cols.descripcion] || "").trim() : "";
+        const note = [descripcion, contacto].filter(Boolean).join(" - ");
+        const dateStr = excelDateToStr(fechaRaw);
+        const importRef = `import:${sheetName}:${consecutivo != null ? consecutivo : dateStr + "|" + amount + "|" + note}`;
+        toAdd.push({
+          id: uid(), type, amount, category, medio,
+          note, date: dateStr, createdAt: toDate(dateStr).getTime(),
+          importRef,
+        });
+      }
+    }
+    return { toAdd, skipped };
+  }
+  function mergeImportedMovimientos(toAdd) {
+    const existingRefs = new Set(movimientos.filter((m) => m.importRef).map((m) => m.importRef));
+    let added = 0, duplicates = 0;
+    for (const m of toAdd) {
+      if (existingRefs.has(m.importRef)) { duplicates++; continue; }
+      movimientos.push(m);
+      existingRefs.add(m.importRef);
+      added++;
+    }
+    movimientos.sort((a, b) => toDate(b.date) - toDate(a.date) || b.createdAt - a.createdAt);
+    return { added, duplicates };
   }
 
   function cartCount() { return Object.values(cart).reduce((a, q) => a + q, 0); }
@@ -1567,6 +1676,15 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       </div>
 
       ${securityCardHTML}
+
+      <div class="cc-card">
+        <p class="cc-card-label">Importar movimientos anteriores</p>
+        <p style="font-size:11.5px;color:var(--navySoft);margin:0 0 12px;">Sube un reporte en Excel (como los que descargabas antes de usar Control) y sus ventas/gastos se agregarán a tu historial, sin duplicar lo que ya tengas.</p>
+        <input type="file" id="cc-import-file" accept=".xlsx,.xls" style="display:none;" />
+        <button class="cc-btn-outline" id="cc-import-btn" style="width:100%;" ${importBusy ? "disabled" : ""}>${importBusy ? "Importando…" : "📥 Importar desde Excel"}</button>
+        ${importError ? `<p class="cc-error" style="margin-top:10px;">${esc(importError)}</p>` : ""}
+        ${importSummary ? `<p style="font-size:12px;color:var(--mintText);font-weight:600;margin:10px 0 0;">✓ ${importSummary.added} movimiento${importSummary.added === 1 ? "" : "s"} importado${importSummary.added === 1 ? "" : "s"}${importSummary.duplicates ? `, ${importSummary.duplicates} ya existía${importSummary.duplicates === 1 ? "" : "n"} (omitido${importSummary.duplicates === 1 ? "" : "s"})` : ""}${importSummary.skipped ? `, ${importSummary.skipped} fila${importSummary.skipped === 1 ? "" : "s"} no reconocida${importSummary.skipped === 1 ? "" : "s"}` : ""}.</p>` : ""}
+      </div>
 
       <div class="cc-card">
         <p class="cc-card-label">Tus datos</p>
@@ -3091,6 +3209,36 @@ var o=[];var l=Array.isArray(e);for(f=n.s.c;f<=n.e.c;++f)s[f]=ya(f);for(var c=n.
       showToast("Bloqueo desactivado");
       render();
     });
+
+    const importBtn = document.getElementById("cc-import-btn");
+    const importFileInput = document.getElementById("cc-import-file");
+    if (importBtn && importFileInput) {
+      importBtn.addEventListener("click", () => { if (!importBusy) importFileInput.click(); });
+      importFileInput.addEventListener("change", async () => {
+        const file = importFileInput.files && importFileInput.files[0];
+        importFileInput.value = "";
+        if (!file) return;
+        importBusy = true; importError = ""; importSummary = null; render();
+        try {
+          const buf = await file.arrayBuffer();
+          const wb = XLSX.read(buf, { type: "array", cellDates: true });
+          const { toAdd, skipped } = parseImportWorkbook(wb);
+          if (toAdd.length === 0 && skipped === 0) {
+            importError = "No se reconoció el formato de este archivo. Sube el Excel tal como lo descargaste (con columnas Fecha, Tipo y Valor).";
+          } else {
+            const { added, duplicates } = mergeImportedMovimientos(toAdd);
+            await saveData();
+            importSummary = { added, duplicates, skipped };
+            showToast(added > 0 ? `${added} movimiento${added === 1 ? "" : "s"} importado${added === 1 ? "" : "s"}` : "No había movimientos nuevos para importar");
+          }
+        } catch (err) {
+          importError = "No se pudo leer el archivo. Verifica que sea un Excel (.xlsx) válido.";
+        } finally {
+          importBusy = false;
+          render();
+        }
+      });
+    }
 
     const exportBackupBtn = document.getElementById("cc-export-backup");
     if (exportBackupBtn) exportBackupBtn.addEventListener("click", async () => {
